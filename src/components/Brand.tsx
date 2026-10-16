@@ -22,10 +22,13 @@ export function Brand({ size = "md" }: { size?: "md" | "lg" }) {
     );
   }
   return (
-    <div className="flex items-center gap-2.5">
-      <LogoMark className="size-9" />
-      <span className="font-display text-lg font-bold leading-tight tracking-tight">
-        Dev Bros: <span className="text-primary">the Hackthathon</span>
+    // Two-line lockup so it never wraps unpredictably next to a header button on narrow phones.
+    <div className="flex min-w-0 items-center gap-2.5">
+      {/* Very narrow screens (small phones, or zoomed text): drop the mark so the name never collides. */}
+      <LogoMark className="size-10 shrink-0 max-[359px]:hidden" />
+      <span className="flex min-w-0 flex-col font-display font-bold leading-[1.1] tracking-tight">
+        <span className="whitespace-nowrap text-[15px] max-[359px]:text-sm">Dev Bros:</span>
+        <span className="whitespace-nowrap text-lg text-primary max-[359px]:text-base">the Hackthathon</span>
       </span>
     </div>
   );

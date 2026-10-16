@@ -17,11 +17,11 @@ export function PhoneShell({ children }: { children: ReactNode }) {
         <header className="flex items-center justify-between gap-2">
           <Brand />
           {onAdmin ? (
-            <Link to="/join" className="flex min-h-11 items-center rounded-full bg-surface px-3 text-sm font-semibold ring-1 ring-border">
+            <Link to="/join" className="flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full bg-surface px-3.5 text-sm font-semibold ring-1 ring-border">
               My check-in
             </Link>
           ) : isOrganiser ? (
-            <Link to="/admin" className="flex min-h-11 items-center rounded-full bg-ink px-3 text-sm font-semibold text-page">
+            <Link to="/admin" className="flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full bg-ink px-3.5 text-sm font-semibold text-page">
               Organiser
             </Link>
           ) : null}

@@ -4,6 +4,13 @@ All notable changes to Dev Bros: the Hackthathon. Versions follow [Semantic Vers
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-16
+
+### Fixed
+
+- **Phone header on iPhone 13 / 13 Pro:** the **My check-in** and **Organiser** buttons wrapped onto two lines. The name now sits as a two-line lockup beside a single-line button. On very narrow or zoomed screens the logo mark steps aside so nothing overlaps. Checked from 293 to 430 px wide.
+- **"Powered by Netlify" badge** no longer floats over phones and the big screen (turned off in the Netlify project settings).
+
 ## [1.0.0] - 2026-10-16
 
 First release, ready for the event on Sunday 18 October 2026.

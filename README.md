@@ -41,17 +41,7 @@ The organiser code is the `ADMIN_TOKEN` Convex environment variable: `npx convex
 
 ## Deploy (Netlify + Convex)
 
-From a machine logged in to both Convex and Netlify:
-
-```sh
-npx convex env set ADMIN_TOKEN <code> --prod   # once
-npx convex deploy --cmd 'pnpm build'            # pushes functions to prod + builds with the prod URL
-npx netlify-cli deploy --prod --no-build --dir dist   # folder is linked to devbros-hackthathon
-```
-
-For builds on Netlify instead (git-connected), `netlify.toml` already sets the build command, SPA redirect and Node version; add a production `CONVEX_DEPLOY_KEY` (Convex dashboard → Settings → Deploy keys) to the Netlify site's environment.
-
-Then open `https://<site>/admin/<code>` on each organiser's phone.
+Push or merge to `main` and Netlify deploys automatically: Convex functions to production, then the site. Branches and PRs don't deploy. The production `CONVEX_DEPLOY_KEY` lives in Netlify's environment as a secret. Manual fallback from a logged-in machine: `pnpm ship`.
 
 ## How it guarantees things
 

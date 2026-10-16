@@ -58,15 +58,11 @@ CI runs typecheck, tests and a build on every push and PR.
   - team totals hidden from public queries until the organiser reveals;
   - every phase change guarded server-side.
 
-## 5. Production (only when you're ready)
+## 5. Production
 
-Production is one Convex prod deployment plus the Netlify site `devbros-hackthathon`. To deploy you need access from Mohamed (see below). Then:
+**Merging to `main` deploys automatically.** Netlify pulls the repo, runs `npx convex deploy --cmd 'pnpm build'` (pushes Convex functions to production, then builds the site against it) and publishes. The production `CONVEX_DEPLOY_KEY` is a secret in Netlify's environment. Branches and PRs don't deploy (`ignore` in `netlify.toml`), so nothing reaches production without a merge. CI still runs on PRs.
 
-```sh
-pnpm ship   # = convex deploy (functions to prod + build with the prod URL) → netlify deploy --prod
-```
-
-`.env.local` must belong to the **devbros-hackthathon** Convex project for `convex deploy` to target the right prod deployment. If you created your own project in step 2, use `CONVEX_DEPLOY_KEY=<prod key> pnpm ship` instead.
+Watch deploys at https://app.netlify.com/projects/devbros-hackthathon/deploys. A manual deploy from a logged-in machine is still possible with `pnpm ship`.
 
 The production organiser code is **not** in this repo. Ask Mohamed for it, and never put it on the projected screen or in a commit.
 
@@ -76,5 +72,5 @@ The production organiser code is **not** in this repo. Ask Mohamed for it, and n
 |---|---|---|
 | GitHub collaborator on `redomar/devbros-hackthathon` | push branches, merge PRs | `gh api -X PUT repos/redomar/devbros-hackthathon/collaborators/<username> -f permission=push` |
 | Convex team member | see prod data/logs, deploy | Convex dashboard → Team settings → Members → Invite |
-| Netlify site access | deploy the site | Netlify → Team settings → Members, **or** skip it: connect the repo in Netlify so merges to `main` auto-deploy (add a prod `CONVEX_DEPLOY_KEY` to the site's env vars; `netlify.toml` already has the build command) |
+| Netlify site access | only to watch deploy logs (merging to `main` already deploys) | Netlify → Team settings → Members |
 | Production organiser code | run the event | send privately (not in chat logs you'd share) |

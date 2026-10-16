@@ -1,8 +1,11 @@
 [build]
   # Deploys Convex functions to production, then builds the site with VITE_CONVEX_URL pointed at it.
-  # Requires CONVEX_DEPLOY_KEY (production) in the Netlify site's environment when building on Netlify.
+  # CONVEX_DEPLOY_KEY (production deploy key) is set as a secret in the Netlify site's environment.
   command = "npx convex deploy --cmd 'pnpm build'"
   publish = "dist"
+  # Only pushes to main deploy. Branch/PR previews are skipped so they can never push functions to
+  # the production Convex deployment.
+  ignore = 'test "$CONTEXT" != "production"'
 
 [build.environment]
   NODE_VERSION = "24"

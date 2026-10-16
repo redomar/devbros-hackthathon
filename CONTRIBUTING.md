@@ -66,6 +66,16 @@ Watch deploys at https://app.netlify.com/projects/devbros-hackthathon/deploys. A
 
 The production organiser code is **not** in this repo. Ask Mohamed for it, and never put it on the projected screen or in a commit.
 
+## 6. Versioning and releases
+
+[Semantic Versioning](https://semver.org/): **patch** for fixes, **minor** for new features, **major** for breaking changes to how the event runs. The version lives in `package.json`, and every screen shows it as a small grey `v1.2.3 · <commit>`.
+
+1. Note user-facing changes under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md) as you go (Added / Changed / Fixed).
+2. To release: rename that section to `## [x.y.z] - YYYY-MM-DD`, bump `"version"` in `package.json`, commit `Release x.y.z`, and merge to `main` (this deploys).
+3. Tag and publish: `git tag vx.y.z && git push origin vx.y.z`, then `gh release create vx.y.z --title vx.y.z --notes "<that changelog section>"`.
+
+Plain commit messages only: no `Co-Authored-By` trailers.
+
 ## Access checklist (Mohamed grants these)
 
 | What | Why | How |

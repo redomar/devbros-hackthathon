@@ -15,6 +15,7 @@ import { HackathonView } from "../components/display/HackathonView";
 import { VotingView } from "../components/display/VotingView";
 import { ResultsPendingView, ResultsView } from "../components/display/ResultsViews";
 import { OrganiserTray } from "../components/display/OrganiserTray";
+import { VersionTag } from "../components/VersionTag";
 
 const PHASE_LABEL: Record<PublicState["phase"], string> = {
   setup: "Check-in",
@@ -69,6 +70,7 @@ export function EventDisplay() {
         {state.phase === "results_pending" ? <ResultsPendingView state={state} /> : null}
         {state.phase === "results" ? <ResultsView state={state} live={resultsLive} /> : null}
       </main>
+      <VersionTag className="pointer-events-auto fixed bottom-2 left-3 z-40" />
       <OrganiserTray state={state} now={now} />
     </div>
   );

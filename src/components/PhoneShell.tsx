@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router";
 import { Brand } from "./Brand";
 import { ReconnectBanner } from "./Connection";
 import { getAdminToken } from "../lib/storage";
+import { VersionTag } from "./VersionTag";
 
 export function PhoneShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
@@ -12,7 +13,7 @@ export function PhoneShell({ children }: { children: ReactNode }) {
   return (
     <div className="paper min-h-dvh">
       <ReconnectBanner />
-      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pt-5 pb-10">
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 px-4 pt-5 pb-6">
         <header className="flex items-center justify-between gap-2">
           <Brand />
           {onAdmin ? (
@@ -26,6 +27,9 @@ export function PhoneShell({ children }: { children: ReactNode }) {
           ) : null}
         </header>
         {children}
+        <footer className="mt-auto pt-6 text-center">
+          <VersionTag />
+        </footer>
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ Live event companion for Sunday 18 October 2026. An iPad shows the big screen (m
 | [docs/status.md](docs/status.md) | What's done, what's left before Sunday |
 | [docs/event-day-runbook.md](docs/event-day-runbook.md) | Running the actual event |
 | [docs/product-brief.md](docs/product-brief.md) | The original brief (superseded where decisions differ) |
+| [CHANGELOG.md](CHANGELOG.md) | What changed in each version |
 
 ## Routes
 

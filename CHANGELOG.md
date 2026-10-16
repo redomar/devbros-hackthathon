@@ -4,6 +4,13 @@ All notable changes to Dev Bros: the Hackthathon. Versions follow [Semantic Vers
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-16
+
+### Changed
+
+- **Team draw animation now matches the team cards.** Instead of plain name bubbles in dashed boxes, the three real team cards appear with empty slots. Each brother's chip, styled exactly like a finished card row, pops in, hops around the screen three times, then flies into its slot. The cards take on their team colours and show their experience mix, then the captains are crowned. It runs about 6.5 seconds, up from 3.
+- The "balanced by experience, captains drawn at random" note moved from the bottom of the screen to just under the heading, so nothing shifts when the draw hands over to the teams.
+
 ## [1.0.1] - 2026-10-16
 
 ### Fixed

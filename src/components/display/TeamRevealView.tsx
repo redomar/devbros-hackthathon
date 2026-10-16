@@ -1,37 +1,27 @@
-import { useEffect, useRef, useState } from "react";
-import { createTimeline, stagger, utils } from "animejs";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { animate, createTimeline, stagger, utils, type JSAnimation } from "animejs";
 import type { PublicState } from "../../lib/useEvent";
 import { prefersReducedMotion } from "../../lib/motion";
 import { formatCountdown } from "../../../shared/time";
-import { membersOf, TeamCard, teamSymbol } from "../TeamCard";
-import { teamStyle } from "../teamStyle";
-
-const SHUFFLE_MS = 3000;
+import { TeamCard } from "../TeamCard";
 
 export function TeamRevealView({ state, now, live }: { state: PublicState; now: number; live: boolean }) {
   // A reshuffle changes captains/memberships: replay the shuffle for it too.
   const signature = state.teams.map((t) => t.memberIds.join(",") + t.captainId).join("|");
   const [shuffling, setShuffling] = useState(live && !prefersReducedMotion());
-  const [animateCards, setAnimateCards] = useState(live);
+  const [crown, setCrown] = useState(false);
   const lastSignature = useRef(signature);
 
   useEffect(() => {
     if (lastSignature.current !== signature) {
       lastSignature.current = signature;
-      setAnimateCards(true);
       if (!prefersReducedMotion()) setShuffling(true);
     }
   }, [signature]);
 
-  useEffect(() => {
-    if (!shuffling) return;
-    const id = window.setTimeout(() => setShuffling(false), SHUFFLE_MS);
-    return () => window.clearTimeout(id);
-  }, [shuffling, signature]);
-
   return (
     <div className="flex h-full flex-col gap-[1.4em]">
-      <div className="flex items-end justify-between gap-[1em]">
+      <div className="flex min-h-[7.2em] items-end justify-between gap-[1em]">
         <div>
           <p className="text-[1.1em] font-bold uppercase tracking-[0.18em] text-gold">
             {shuffling ? "Drawing teams" : "Your teams"}
@@ -39,17 +29,27 @@ export function TeamRevealView({ state, now, live }: { state: PublicState; now: 
           <h1 className="font-display text-[3.2em] font-bold leading-none tracking-tight">
             {shuffling ? "Balancing experience…" : "Three teams, one intention"}
           </h1>
+          {/* Same line in both states so the cards don't shift when the shuffle hands over. */}
+          <p className="mt-[0.4em] text-[1.15em] text-ink-muted">
+            {shuffling
+              ? "Mixing levels so every team gets a fair spread."
+              : "Balanced by experience level. Captains drawn at random."}
+          </p>
         </div>
         {!shuffling ? <RevealCountdown state={state} now={now} /> : null}
       </div>
       <div className="min-h-0 flex-1">
-        {shuffling ? <Shuffle state={state} key={signature} /> : <Cards state={state} animateIn={animateCards} key={signature} />}
+        {shuffling ? (
+          <Shuffle state={state} key={signature} onDone={() => {
+              setShuffling(false);
+              setCrown(true);
+            }}
+          />
+        ) : (
+          // After a shuffle the cards are already in place: only the captain reveal plays.
+          <Cards state={state} crownCaptains={crown} key={signature} />
+        )}
       </div>
-      {!shuffling ? (
-        <p className="text-center text-[1em] text-ink-muted">
-          Teams were balanced by experience level. Captains were drawn at random.
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -70,75 +70,99 @@ function RevealCountdown({ state, now }: { state: PublicState; now: number }) {
   );
 }
 
-/** Name tokens fly from a scattered cloud into their team columns. Purely visual; teams are already drawn. */
-function Shuffle({ state }: { state: PublicState }) {
+const HOPS = 3;
+
+/**
+ * The same cards as the final reveal, but empty: each brother's chip pops in, hops around the room a few
+ * times, then flies into its slot. Purely visual: the teams were already drawn on the server.
+ */
+function Shuffle({ state, onDone }: { state: PublicState; onDone: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
+  const [settled, setSettled] = useState(false);
+  const done = useRef(onDone);
+  done.current = onDone;
+
+  // Layout effect: place chips at their starting spots before the first paint so nothing flashes.
+  useLayoutEffect(() => {
     const host = ref.current;
     if (!host) return;
-    const tokens = host.querySelectorAll<HTMLElement>("[data-token]");
-    const w = host.clientWidth;
-    const h = host.clientHeight;
-    const tl = createTimeline();
-    tl.add(tokens, {
-      translateX: () => [utils.random(-w * 0.4, w * 0.4), utils.random(-w * 0.3, w * 0.3)],
-      translateY: () => [utils.random(-h * 0.3, h * 0.3), utils.random(-h * 0.25, h * 0.25)],
-      rotate: () => [utils.random(-30, 30), utils.random(-15, 15)],
-      opacity: [0, 1],
-      duration: 900,
-      delay: stagger(60),
-      ease: "inOutQuad",
-    }).add(
-      tokens,
-      { translateX: 0, translateY: 0, rotate: 0, duration: 1100, delay: stagger(70, { from: "random" }), ease: "outBack(1.2)" },
-      "-=200",
-    );
+    const area = host.getBoundingClientRect();
+    const cards = host.querySelectorAll<HTMLElement>("[data-card]");
+    const tokens = [...host.querySelectorAll<HTMLElement>("[data-token]")];
+    const animations: JSAnimation[] = [];
+    const timers: number[] = [];
+
+    // Shells fade in (opacity only, so chips can fly over neighbouring cards).
+    utils.set(cards, { opacity: 0 });
+    animations.push(animate(cards, { opacity: [0, 1], duration: 700, delay: stagger(160), ease: "outQuad" }));
+
+    let lastLanding = 0;
+    const order = utils.shuffle([...tokens.keys()]);
+    tokens.forEach((el, i) => {
+      const home = el.getBoundingClientRect();
+      const spot = () => ({
+        x: utils.random(area.left, area.right - home.width) - home.left,
+        y: utils.random(area.top, area.bottom - home.height) - home.top,
+        r: utils.random(-12, 12),
+      });
+      const spots = Array.from({ length: HOPS + 1 }, spot);
+      const hops = spots.slice(1).map(() => utils.random(620, 860));
+      const appearAt = 650 + order[i] * 70;
+      const land = 1150;
+      lastLanding = Math.max(lastLanding, appearAt + hops.reduce((a, b) => a + b, 0) + land);
+
+      utils.set(el, { translateX: spots[0].x, translateY: spots[0].y, rotate: spots[0].r, opacity: 0, scale: 0.6 });
+      const path = (k: "x" | "y" | "r") => [
+        ...spots.slice(1).map((p, h) => ({ to: p[k], duration: hops[h], ease: "inOutCubic" })),
+        { to: 0, duration: land, ease: "outBack(1.2)" },
+      ];
+      animations.push(
+        animate(el, {
+          opacity: [{ to: 1, duration: 380, ease: "outQuad" }],
+          scale: [{ to: 1, duration: 520, ease: "outBack(2.2)" }],
+          translateX: path("x"),
+          translateY: path("y"),
+          rotate: path("r"),
+          delay: appearAt,
+        }),
+      );
+    });
+
+    // Everyone's home: tint the cards and show the scores, hold a moment, then hand over to the reveal.
+    timers.push(window.setTimeout(() => setSettled(true), lastLanding + 150));
+    timers.push(window.setTimeout(() => done.current(), lastLanding + 1500));
+
     return () => {
-      tl.revert();
+      timers.forEach((t) => window.clearTimeout(t));
+      animations.forEach((a) => a.revert());
     };
   }, []);
 
   return (
-    <div ref={ref} className="grid h-full grid-cols-3 gap-[1.4em]">
-      {state.teams.map((team) => {
-        const style = teamStyle(team.key);
-        return (
-          <div key={team.id} className={`flex flex-col gap-[0.8em] rounded-[1.6em] border-2 border-dashed p-[1.2em] ${style.border}`}>
-            <div className={`font-display text-[1.5em] font-bold ${style.text}`}>
-              {teamSymbol(team.key)} {team.name}
-            </div>
-            {membersOf(team, state.participants).map((p) => (
-              <div
-                key={p.id}
-                data-token
-                className="rounded-full bg-surface px-[1em] py-[0.5em] text-center font-display text-[1.4em] font-semibold shadow-md ring-1 ring-border"
-              >
-                {p.firstName}
-              </div>
-            ))}
-          </div>
-        );
-      })}
+    <div ref={ref} className="grid h-full grid-cols-3 items-start gap-[1.4em]">
+      {state.teams.map((team) => (
+        <div key={team.id} data-card>
+          <TeamCard team={team} participants={state.participants} stage={settled ? "settled" : "shuffle"} />
+        </div>
+      ))}
     </div>
   );
 }
 
-function Cards({ state, animateIn }: { state: PublicState; animateIn: boolean }) {
+function Cards({ state, crownCaptains }: { state: PublicState; crownCaptains: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const host = ref.current;
-    if (!host || !animateIn || prefersReducedMotion()) return;
-    const cards = host.querySelectorAll<HTMLElement>("[data-card]");
+    if (!host || !crownCaptains) return;
     const crowns = host.querySelectorAll<HTMLElement>("[data-crown]");
     const captains = host.querySelectorAll<HTMLElement>("[data-captain]");
     const tl = createTimeline();
-    tl.add(cards, { opacity: [0, 1], translateY: [40, 0], scale: [0.96, 1], duration: 700, delay: stagger(220), ease: "outExpo" })
-      .add(captains, { backgroundColor: ["#ffffff", "#f7ebd2"], duration: 500, delay: stagger(150) }, "-=200")
-      .add(crowns, { scale: [0, 1.35, 1], rotate: [-20, 0], opacity: [0, 1], duration: 700, delay: stagger(150), ease: "outBack(2)" }, "<<");
+    tl.add(captains, { backgroundColor: ["#ffffff", "#f7ebd2"], duration: 700, delay: stagger(260), ease: "outQuad" })
+      .add(crowns, { scale: [0, 1.4, 1], rotate: [-25, 0], opacity: [0, 1], duration: 800, delay: stagger(260), ease: "outBack(2)" }, "<<+=150");
     return () => {
       tl.revert();
     };
-  }, [animateIn]);
+  }, [crownCaptains]);
 
   return (
     <div ref={ref} className="grid h-full grid-cols-3 items-start gap-[1.4em]">

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useEventState } from "../lib/useEvent";
-import { getDeviceId } from "../lib/storage";
+import { useMe } from "../lib/useMe";
 import { errorMessage } from "../lib/errors";
 import { LEVELS, LEVEL_HINT, LEVEL_LABEL, type Level } from "../../shared/levels";
 import { NAME_MAX_LENGTH, validateFirstName } from "../../shared/names";
@@ -11,12 +11,15 @@ import { PhoneHeading, PhoneShell } from "../components/PhoneShell";
 import { MyTeam } from "../components/MyTeam";
 import { LevelPill } from "../components/People";
 import { Button, Card, Notice, Spinner } from "../components/ui";
+import { useConfirm } from "../components/ConfirmDialog";
 
 export function JoinPage() {
-  const deviceId = getDeviceId();
+  const { deviceId, me, forget } = useMe();
   const state = useEventState();
-  const me = useQuery(api.event.me, { deviceId });
   const [editing, setEditing] = useState(false);
+  const leave = useMutation(api.participants.leave);
+  const { confirm, dialog } = useConfirm();
+  const [leaveError, setLeaveError] = useState<string | null>(null);
 
   if (state === undefined || me === undefined) {
     return (
@@ -44,11 +47,35 @@ export function JoinPage() {
             <LevelPill level={me.experience} />
           </div>
           {open ? (
-            <Button variant="secondary" onClick={() => setEditing(true)}>
-              Edit my details
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button variant="secondary" onClick={() => setEditing(true)}>
+                Edit my details
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: "Remove your check-in?",
+                    body: "Your name comes off the board and this phone forgets you. You can check in again any time before teams are drawn.",
+                    confirmLabel: "Remove me",
+                    tone: "danger",
+                  });
+                  if (!ok) return;
+                  try {
+                    await leave({ deviceId });
+                    forget();
+                  } catch (e) {
+                    setLeaveError(errorMessage(e));
+                  }
+                }}
+              >
+                Remove me
+              </Button>
+            </div>
           ) : null}
+          {leaveError ? <Notice tone="error">{leaveError}</Notice> : null}
         </Card>
+        {dialog}
         {state.phase === "setup" ? (
           <Notice>Teams will be drawn once everyone has arrived. Watch the big screen!</Notice>
         ) : null}

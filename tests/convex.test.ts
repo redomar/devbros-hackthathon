@@ -55,6 +55,14 @@ describe("check-in", () => {
     expect(JSON.stringify(await t.query(api.event.publicState, {}))).not.toContain("device-secret-1");
   });
 
+  it("lets a phone remove its own check-in before teams are drawn", async () => {
+    const t = convexTest(schema, modules);
+    await t.mutation(api.participants.register, { deviceId: "device-leave-1", firstName: "Hamza", experience: "beginner" });
+    await t.mutation(api.participants.leave, { deviceId: "device-leave-1" });
+    expect(await t.query(api.event.me, { deviceId: "device-leave-1" })).toBeNull();
+    expect((await t.query(api.event.publicState, {})).participants).toHaveLength(0);
+  });
+
   it("closes check-in once teams are made", async () => {
     const t = convexTest(schema, modules);
     await registerNine(t);

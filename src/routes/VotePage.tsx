@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useEventState, type PublicParticipant, type PublicState, type PublicTeam } from "../lib/useEvent";
-import { getDeviceId } from "../lib/storage";
+import { useMe } from "../lib/useMe";
 import { errorCode, errorMessage } from "../lib/errors";
 import { rankTeams, winnersOf } from "../lib/results";
 import { normaliseName } from "../../shared/names";
@@ -17,9 +17,8 @@ import { Button, Card, Notice, Spinner } from "../components/ui";
 type Voter = { participant: PublicParticipant; via: "device" | "name" };
 
 export function VotePage() {
-  const deviceId = getDeviceId();
+  const { deviceId, me } = useMe();
   const state = useEventState();
-  const me = useQuery(api.event.me, { deviceId });
   const [voter, setVoter] = useState<Voter | null>(null);
   const [useName, setUseName] = useState(false);
   const [done, setDone] = useState(false);

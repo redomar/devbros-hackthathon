@@ -58,6 +58,20 @@ export const register = mutation({
   },
 });
 
+/** A phone removes its own check-in (before teams are drawn). */
+export const leave = mutation({
+  args: { deviceId: v.string() },
+  handler: async (ctx, { deviceId }) => {
+    const event = await loadEvent(ctx);
+    if (event.phase !== "setup") fail("closed", "Teams have been drawn. Ask an organiser to make changes.");
+    const me = await ctx.db
+      .query("participants")
+      .withIndex("by_device", (q) => q.eq("deviceId", deviceId))
+      .first();
+    if (me) await ctx.db.delete(me._id);
+  },
+});
+
 export const adminUpdate = mutation({
   args: {
     token: v.string(),

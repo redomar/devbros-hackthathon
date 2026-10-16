@@ -63,10 +63,10 @@ CI runs typecheck, tests and a build on every push and PR.
 Production is one Convex prod deployment plus the Netlify site `devbros-hackthathon`. To deploy you need access from Mohamed (see below). Then:
 
 ```sh
-pnpm deploy   # = convex deploy (functions to prod + build with the prod URL) → netlify deploy --prod
+pnpm ship   # = convex deploy (functions to prod + build with the prod URL) → netlify deploy --prod
 ```
 
-`.env.local` must belong to the **devbros-hackthathon** Convex project for `convex deploy` to target the right prod deployment. If you created your own project in step 2, use `CONVEX_DEPLOY_KEY=<prod key> pnpm deploy` instead.
+`.env.local` must belong to the **devbros-hackthathon** Convex project for `convex deploy` to target the right prod deployment. If you created your own project in step 2, use `CONVEX_DEPLOY_KEY=<prod key> pnpm ship` instead.
 
 The production organiser code is **not** in this repo. Ask Mohamed for it, and never put it on the projected screen or in a commit.
 

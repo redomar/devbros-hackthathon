@@ -1,14 +1,29 @@
 import type { ReactNode } from "react";
+import { Link, useLocation } from "react-router";
 import { Brand } from "./Brand";
 import { ReconnectBanner } from "./Connection";
+import { getAdminToken } from "../lib/storage";
 
 export function PhoneShell({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  const onAdmin = pathname.startsWith("/admin");
+  // Organisers are members too: once this phone has opened the organiser link, offer a way back.
+  const isOrganiser = Boolean(getAdminToken());
   return (
     <div className="paper min-h-dvh">
       <ReconnectBanner />
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pt-5 pb-10">
-        <header className="flex items-center justify-between">
+        <header className="flex items-center justify-between gap-2">
           <Brand />
+          {onAdmin ? (
+            <Link to="/join" className="flex min-h-11 items-center rounded-full bg-surface px-3 text-sm font-semibold ring-1 ring-border">
+              My check-in
+            </Link>
+          ) : isOrganiser ? (
+            <Link to="/admin" className="flex min-h-11 items-center rounded-full bg-ink px-3 text-sm font-semibold text-page">
+              Organiser
+            </Link>
+          ) : null}
         </header>
         {children}
       </div>

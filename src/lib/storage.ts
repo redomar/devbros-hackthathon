@@ -33,5 +33,12 @@ export function getDeviceId(): string {
   return id;
 }
 
+/** Forget this phone's registration: future check-ins start fresh. */
+export function resetDeviceId(): string {
+  const id = crypto.randomUUID();
+  writeStore(DEVICE_KEY, id);
+  return id;
+}
+
 export const getAdminToken = () => readStore(ADMIN_KEY);
 export const setAdminToken = (token: string | null) => writeStore(ADMIN_KEY, token);

@@ -26,12 +26,19 @@ pnpm typecheck && pnpm build
 
 The organiser code is the `ADMIN_TOKEN` Convex environment variable: `npx convex env set ADMIN_TOKEN <code>` (use `--prod` for production).
 
-## Deploy (Vercel + Convex)
+## Deploy (Netlify + Convex)
 
-1. `npx convex deploy` once to create the production deployment, then `npx convex env set ADMIN_TOKEN <new code> --prod`.
-2. In the Convex dashboard, generate a **production deploy key**.
-3. Import the GitHub repo into Vercel. Set env var `CONVEX_DEPLOY_KEY` (Production). `vercel.json` already sets the build command (`convex deploy --cmd 'pnpm build'`) and the SPA rewrite.
-4. Open `https://<domain>/admin/<code>` on each organiser's phone.
+From a machine logged in to both Convex and Netlify:
+
+```sh
+npx convex env set ADMIN_TOKEN <code> --prod   # once
+npx convex deploy --cmd 'pnpm build'            # pushes functions to prod + builds with the prod URL
+npx netlify-cli deploy --prod --dir dist
+```
+
+For builds on Netlify instead (git-connected), `netlify.toml` already sets the build command, SPA redirect and Node version; add a production `CONVEX_DEPLOY_KEY` (Convex dashboard → Settings → Deploy keys) to the Netlify site's environment.
+
+Then open `https://<site>/admin/<code>` on each organiser's phone.
 
 ## How it guarantees things
 

@@ -7,10 +7,10 @@
     "dev": "vite",
     "dev:convex": "convex dev",
     "build": "tsc -b && vite build",
-    "build:vercel": "convex deploy --cmd 'pnpm build'",
     "typecheck": "tsc -b && tsc -p convex --noEmit",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "convex deploy --cmd \"pnpm build\" && netlify deploy --prod --dir dist"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

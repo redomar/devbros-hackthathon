@@ -1,0 +1,13 @@
+[build]
+  # Deploys Convex functions to production, then builds the site with VITE_CONVEX_URL pointed at it.
+  # Requires CONVEX_DEPLOY_KEY (production) in the Netlify site's environment when building on Netlify.
+  command = "npx convex deploy --cmd 'pnpm build'"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

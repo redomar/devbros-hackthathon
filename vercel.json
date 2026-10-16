@@ -1,4 +1,0 @@
-{
-  "buildCommand": "pnpm build:vercel",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}

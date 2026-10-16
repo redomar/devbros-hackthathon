@@ -10,7 +10,8 @@
     "typecheck": "tsc -b && tsc -p convex --noEmit",
     "test": "vitest run",
     "preview": "vite preview",
-    "deploy": "convex deploy -y --cmd \"pnpm build\" && npx netlify-cli deploy --prod --no-build --dir dist"
+    "deploy": "convex deploy -y --cmd \"pnpm build\" && npx netlify-cli deploy --prod --no-build --dir dist",
+    "rehearse": "node scripts/rehearse.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
@@ -30,6 +31,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "convex-test": "^0.0.62",
+    "playwright": "1.64.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9.3",
     "vite": "^8.3.4",

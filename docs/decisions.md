@@ -1,0 +1,22 @@
+# Decisions log
+
+Agreed between the organisers on 16 Oct 2026 while planning the build. Where this differs from [product-brief.md](product-brief.md), this file wins.
+
+| # | Decision | Why |
+|---|---|---|
+| 1 | **Convex is the whole backend.** No custom WebSocket server, no JSON checkpoint file, no backup/restore feature. | Convex already gives server-validated mutations, live subscriptions over WebSocket and durable storage. A second realtime layer would be a second source of truth. It replaces the brief's "tiny `ws` relay" and its "no database" rule. |
+| 2 | **Hosting: Netlify** (static site) + Convex Cloud. | Organiser preference. Originally planned for Vercel. |
+| 3 | **Organiser controls in two places:** a hidden corner tray on the iPad, plus `/admin/<code>` on organisers' phones. | The iPad stays clean for the room, but a pause for Salah can happen from anywhere. The code never appears on the projector. |
+| 4 | **The iPad pairs by typing the code** in the tray, inside the Home Screen web app. | Keeps the token out of the projected URL bar. iOS Home Screen apps don't share Safari's storage. |
+| 5 | **Turnout of 3–12 is allowed.** Always 3 teams, sizes differing by at most one. Making teams with ≠ expected people needs an explicit confirmation. | Real attendance may not be exactly 9. Never silently uneven. |
+| 6 | **Organisers play** as normal participants; the organiser code is separate from participant identity. | They want to take part. Their extra job is hosting and introductions. |
+| 7 | **Raw vote counts** decide the winner, even with uneven team sizes. | Simple to explain on screen, and moot at exactly 9. |
+| 8 | **Ties → joint winners.** No run-off. | Avoids an extra phase and its edge cases (e.g. a two-team run-off where some voters' own team is in it). |
+| 9 | **Voting identity:** the phone that checked in votes automatically. *Not you?* falls back to typing the registered name. No codes or passwords. | Trust-based is fine for nine known brothers. The limitation is stated honestly in the UI and docs. |
+| 10 | **Name collisions:** the second person is asked to add a nickname or initial ("Ali K"). No organiser alias workflow. | Cut for time. Uniqueness is still enforced so votes stay unambiguous. |
+| 11 | **Salah:** Birmingham Central Mosque's published timetable for 18 Oct 2026 (begins + jama'ah), Europe/London, editable on `/admin`. No prayer-times API. | Source: centralmosque.org.uk/timetable. The mosque doesn't state its Asr method, so the app shows its published time as is. |
+| 12 | **Timer defaults:** 25/5 focus/break, 3-minute auto-start after the team reveal (0 = manual), optional "hacking ends at" time with a 15-minute warning. Voting always starts by hand. | Brief's recommendation. All editable. |
+| 13 | **Sound:** off by default; enable in the iPad tray. Chimes on focus/break changes, the Salah reminder and the winner reveal. Connection health = a Live/Reconnecting dot on the display and a banner on phones, with no per-device presence list. | Safari needs a tap before audio. Presence tracking wasn't worth the time. |
+| 14 | **Team identity:** fixed names Emerald ◆, Sapphire ●, Amethyst ▲, each with a colour and a symbol (never colour alone). | Fast. Letting captains rename their team is a stretch goal. |
+| 15 | **Visual direction:** light warm ivory + emerald + restrained gold, Bricolage Grotesque (display) + Manrope (body), self-hosted fonts. Initials only, no photos. | Brief's recommended direction. Shipped without a preview round to save time. |
+| 16 | **Cut from the brief:** JSON backup/restore, the separate settings page (it's a section of `/admin`), the alias workflow, run-off voting, per-device presence. | Time. Convex already makes state durable. |

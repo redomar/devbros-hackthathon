@@ -4,6 +4,17 @@ Live event companion for Sunday 18 October 2026. An iPad shows the big screen (m
 
 **Stack:** Vite + React + TypeScript + Tailwind v4 + anime.js, with [Convex](https://convex.dev) as the realtime backend (its client keeps a WebSocket open, so every screen updates instantly). No accounts, no logins.
 
+**New here? Start with [CONTRIBUTING.md](CONTRIBUTING.md).**
+
+| Doc | For |
+|---|---|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Setting up your own dev backend, running, testing, deploying, access |
+| [docs/architecture.md](docs/architecture.md) | How it works: phase machine, timer, voting privacy, folder map |
+| [docs/decisions.md](docs/decisions.md) | What the organisers agreed and why |
+| [docs/status.md](docs/status.md) | What's done, what's left before Sunday |
+| [docs/event-day-runbook.md](docs/event-day-runbook.md) | Running the actual event |
+| [docs/product-brief.md](docs/product-brief.md) | The original brief (superseded where decisions differ) |
+
 ## Routes
 
 | Path | Who | What |
@@ -20,7 +31,9 @@ Live event companion for Sunday 18 October 2026. An iPad shows the big screen (m
 pnpm install
 pnpm dev:convex   # first run creates .env.local; keep running to push function changes
 pnpm dev          # http://localhost:5173
+npx convex env set ADMIN_TOKEN <any-dev-code>
 pnpm test         # allocator, Salah/time, timer + Convex integration tests
+pnpm rehearse     # end-to-end browser rehearsal against your dev backend
 pnpm typecheck && pnpm build
 ```
 

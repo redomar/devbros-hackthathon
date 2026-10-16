@@ -1,0 +1,80 @@
+# Contributing: start here
+
+Welcome! This gets you from zero to a running copy with your own backend in about 10 minutes. You won't touch production until you choose to.
+
+**Read next:** [docs/architecture.md](docs/architecture.md) (how it works) · [docs/decisions.md](docs/decisions.md) (what was agreed and why) · [docs/status.md](docs/status.md) (what's done and what's next) · [docs/event-day-runbook.md](docs/event-day-runbook.md) (the day itself) · [docs/product-brief.md](docs/product-brief.md) (original brief).
+
+## 1. Prerequisites
+
+- Node 24+ and pnpm 10 (`corepack enable` or `npm i -g pnpm`)
+- A free [Convex](https://convex.dev) account (sign in with GitHub)
+
+## 2. Run it locally with your own dev backend
+
+```sh
+git clone git@github.com:redomar/devbros-hackthathon.git
+cd devbros-hackthathon
+pnpm install
+
+# Creates YOUR OWN Convex dev deployment, writes .env.local, and watches convex/ for changes.
+# Choose "create a new project" when asked. Leave it running.
+pnpm dev:convex
+
+# In a second terminal: give your dev backend an organiser code (any string you like).
+npx convex env set ADMIN_TOKEN dev-code-1234
+
+# Third terminal:
+pnpm dev     # http://localhost:5173
+```
+
+Open these side by side:
+
+- `http://localhost:5173/event`: the big screen
+- `http://localhost:5173/admin/dev-code-1234`: organiser controls (use **+ Test data** to fill the room)
+- `http://localhost:5173/join`: a phone (use devtools' device mode, or a second browser profile so each "phone" gets its own device id)
+
+To test with a real phone on the same Wi-Fi, use the network URL Vite prints (`http://192.168.x.x:5173`). The QR codes use whatever origin the display was opened on.
+
+## 3. Checks
+
+```sh
+pnpm typecheck   # app + Convex functions
+pnpm test        # allocator, Salah/time, timer + Convex integration tests (convex-test, no network)
+pnpm rehearse    # full browser run-through against your dev backend (needs `pnpm dev` running)
+```
+
+`pnpm rehearse` resets your **dev** event, drives an iPad-sized display, a 16:9 display, two phones and an organiser phone through every phase, asserts the important rules, saves screenshots to `rehearsal-shots/`, then resets again. It refuses to run unless `.env.local` points at a dev deployment. First time only: `pnpm exec playwright install chromium-headless-shell`.
+
+CI runs typecheck, tests and a build on every push and PR.
+
+## 4. Workflow
+
+- Branch from `main`, open a PR, and let CI go green. Keep PRs small; the event is close.
+- Commit `convex/_generated/` when it changes (Convex regenerates it while `pnpm dev:convex` runs).
+- **Rules that must not break** (the tests guard them):
+  - first names only, never surnames;
+  - captains drawn uniformly, never weighted by experience;
+  - no stored voter → team record, anywhere (including logs: never `console.log` vote arguments);
+  - team totals hidden from public queries until the organiser reveals;
+  - every phase change guarded server-side.
+
+## 5. Production (only when you're ready)
+
+Production is one Convex prod deployment plus the Netlify site `devbros-hackthathon`. To deploy you need access from Mohamed (see below). Then:
+
+```sh
+pnpm deploy   # = convex deploy (functions to prod + build with the prod URL) → netlify deploy --prod
+```
+
+`.env.local` must belong to the **devbros-hackthathon** Convex project for `convex deploy` to target the right prod deployment. If you created your own project in step 2, use `CONVEX_DEPLOY_KEY=<prod key> pnpm deploy` instead.
+
+The production organiser code is **not** in this repo. Ask Mohamed for it, and never put it on the projected screen or in a commit.
+
+## Access checklist (Mohamed grants these)
+
+| What | Why | How |
+|---|---|---|
+| GitHub collaborator on `redomar/devbros-hackthathon` | push branches, merge PRs | `gh api -X PUT repos/redomar/devbros-hackthathon/collaborators/<username> -f permission=push` |
+| Convex team member | see prod data/logs, deploy | Convex dashboard → Team settings → Members → Invite |
+| Netlify site access | deploy the site | Netlify → Team settings → Members, **or** skip it: connect the repo in Netlify so merges to `main` auto-deploy (add a prod `CONVEX_DEPLOY_KEY` to the site's env vars; `netlify.toml` already has the build command) |
+| Production organiser code | run the event | send privately (not in chat logs you'd share) |

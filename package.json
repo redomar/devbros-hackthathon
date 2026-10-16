@@ -10,7 +10,7 @@
     "typecheck": "tsc -b && tsc -p convex --noEmit",
     "test": "vitest run",
     "preview": "vite preview",
-    "deploy": "convex deploy --cmd \"pnpm build\" && netlify deploy --prod --dir dist"
+    "deploy": "convex deploy -y --cmd \"pnpm build\" && npx netlify-cli deploy --prod --no-build --dir dist"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

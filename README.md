@@ -33,7 +33,7 @@ From a machine logged in to both Convex and Netlify:
 ```sh
 npx convex env set ADMIN_TOKEN <code> --prod   # once
 npx convex deploy --cmd 'pnpm build'            # pushes functions to prod + builds with the prod URL
-npx netlify-cli deploy --prod --dir dist
+npx netlify-cli deploy --prod --no-build --dir dist   # folder is linked to devbros-hackthathon
 ```
 
 For builds on Netlify instead (git-connected), `netlify.toml` already sets the build command, SPA redirect and Node version; add a production `CONVEX_DEPLOY_KEY` (Convex dashboard → Settings → Deploy keys) to the Netlify site's environment.

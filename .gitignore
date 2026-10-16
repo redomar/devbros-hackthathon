@@ -4,3 +4,6 @@ dist
 .env*.local
 *.tsbuildinfo
 .vercel
+
+# Local Netlify folder
+.netlify

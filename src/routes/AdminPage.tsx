@@ -1,0 +1,306 @@
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+import { useEventState, type PublicParticipant, type PublicState } from "../lib/useEvent";
+import { useNow } from "../lib/clock";
+import { getAdminToken, setAdminToken } from "../lib/storage";
+import { errorMessage } from "../lib/errors";
+import { joinUrl, voteUrl } from "../lib/urls";
+import { LEVELS, LEVEL_LABEL, type Level } from "../../shared/levels";
+import { PhoneHeading, PhoneShell } from "../components/PhoneShell";
+import { OrganiserControls } from "../components/OrganiserControls";
+import { AdminSettings } from "../components/AdminSettings";
+import { useConfirm } from "../components/ConfirmDialog";
+import { LevelPill } from "../components/People";
+import { Button, Card, Notice, Spinner } from "../components/ui";
+
+const PHASE_NAME: Record<PublicState["phase"], string> = {
+  setup: "Check-in open",
+  team_reveal: "Team reveal",
+  hackathon: "Hacking",
+  voting: "Voting open",
+  results_pending: "Voting closed, awaiting reveal",
+  results: "Results revealed",
+};
+
+export function AdminPage() {
+  const params = useParams();
+  const navigate = useNavigate();
+  const [token, setToken] = useState(() => params.token ?? getAdminToken());
+
+  // Capability link: remember it on this device, then drop it from the address bar.
+  useEffect(() => {
+    if (params.token) {
+      setAdminToken(params.token);
+      setToken(params.token);
+      navigate("/admin", { replace: true });
+    }
+  }, [params.token, navigate]);
+
+  const valid = useQuery(api.event.checkAdmin, token ? { token } : "skip");
+  const state = useEventState();
+
+  if (!token || valid === false) {
+    return (
+      <PhoneShell>
+        <PhoneHeading eyebrow="Organisers" title="Organiser access">
+          Open your organiser link, or enter the code.
+        </PhoneHeading>
+        {valid === false ? <Notice tone="error">That organiser code wasn't recognised.</Notice> : null}
+        <CodeForm
+          onSubmit={(t) => {
+            setAdminToken(t);
+            setToken(t);
+          }}
+        />
+      </PhoneShell>
+    );
+  }
+
+  if (valid === undefined || state === undefined) {
+    return (
+      <PhoneShell>
+        <div className="grid place-items-center py-20">
+          <Spinner className="size-8 text-primary" />
+        </div>
+      </PhoneShell>
+    );
+  }
+
+  return <AdminDashboard state={state} token={token} onSignOut={() => { setAdminToken(null); setToken(null); }} />;
+}
+
+function CodeForm({ onSubmit }: { onSubmit: (token: string) => void }) {
+  const [value, setValue] = useState("");
+  return (
+    <form
+      className="flex gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (value.trim()) onSubmit(value.trim().toLowerCase());
+      }}
+    >
+      <input
+        type="password"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="xxxx-xxxx-xxxx"
+        autoComplete="off"
+        autoCapitalize="none"
+        aria-label="Organiser code"
+        className="min-h-12 flex-1 rounded-xl border border-border bg-surface px-3 text-base"
+      />
+      <Button type="submit">Open</Button>
+    </form>
+  );
+}
+
+function AdminDashboard({ state, token, onSignOut }: { state: PublicState; token: string; onSignOut: () => void }) {
+  const now = useNow(500);
+  const pending = useQuery(api.voting.pendingVoters, state.phase === "voting" ? { token } : "skip");
+  const reset = useMutation(api.flow.resetEvent);
+  const addTests = useMutation(api.participants.addTestParticipants);
+  const { confirm, dialog } = useConfirm();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <PhoneShell>
+      <PhoneHeading eyebrow="Organiser" title={PHASE_NAME[state.phase]}>
+        Everything here mirrors to the big screen instantly.
+      </PhoneHeading>
+
+      <Card className="p-4">
+        <OrganiserControls state={state} token={token} now={now} pendingVoters={pending ?? undefined} />
+      </Card>
+
+      {state.phase === "voting" && pending ? (
+        <Card className="p-4">
+          <h2 className="font-semibold">Still to vote ({pending.length})</h2>
+          <p className="text-sm text-ink-muted">{pending.length ? pending.join(", ") : "Everyone has voted."}</p>
+        </Card>
+      ) : null}
+
+      {state.phase === "setup" || state.phase === "team_reveal" ? (
+        <Card className="flex flex-col gap-3 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-xl font-bold">
+              Brothers ({state.participants.length}/{state.settings.expectedParticipants})
+            </h2>
+            {state.phase === "setup" ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  if (
+                    await confirm({
+                      title: "Add test participants?",
+                      body: "Adds placeholders named “Test 1”, “Test 2”… to fill up to 9. For rehearsals only; remove them or reset before the real event.",
+                      confirmLabel: "Add test data",
+                    })
+                  ) {
+                    try {
+                      await addTests({ token, count: Math.max(0, 9 - state.participants.length) });
+                    } catch (e) {
+                      setError(errorMessage(e));
+                    }
+                  }
+                }}
+              >
+                + Test data
+              </Button>
+            ) : null}
+          </div>
+          {state.phase === "team_reveal" ? (
+            <p className="text-sm text-ink-muted">Fix spelling or levels here, then reshuffle if levels changed.</p>
+          ) : null}
+          <ul className="flex flex-col divide-y divide-border">
+            {state.participants.map((p) => (
+              <ParticipantRow key={p.id} p={p} token={token} canRemove={state.phase === "setup"} confirm={confirm} />
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+
+      <Card className="flex flex-col gap-2 p-4 text-sm">
+        <h2 className="font-semibold">Links</h2>
+        <Link to="/event" className="font-semibold text-primary underline">
+          Open the big-screen display on this device
+        </Link>
+        <span className="text-ink-muted">Check-in: {joinUrl()}</span>
+        <span className="text-ink-muted">Voting: {voteUrl()}</span>
+      </Card>
+
+      <AdminSettings state={state} token={token} />
+
+      <Card className="flex flex-col gap-3 p-4">
+        <h2 className="font-semibold text-danger">Danger zone</h2>
+        {error ? <Notice tone="error">{error}</Notice> : null}
+        <Button
+          variant="danger"
+          onClick={async () => {
+            if (
+              await confirm({
+                title: "Reset the whole event?",
+                body: "Deletes every participant, team and vote, and returns to check-in. Settings and Salah times are kept.",
+                confirmLabel: "Reset everything",
+                tone: "danger",
+                typeToConfirm: "RESET",
+              })
+            ) {
+              try {
+                await reset({ token, confirm: "RESET" });
+              } catch (e) {
+                setError(errorMessage(e));
+              }
+            }
+          }}
+        >
+          Reset event
+        </Button>
+        <Button variant="ghost" onClick={onSignOut}>
+          Sign out on this device
+        </Button>
+      </Card>
+      {dialog}
+    </PhoneShell>
+  );
+}
+
+function ParticipantRow({
+  p,
+  token,
+  canRemove,
+  confirm,
+}: {
+  p: PublicParticipant;
+  token: string;
+  canRemove: boolean;
+  confirm: ReturnType<typeof useConfirm>["confirm"];
+}) {
+  const update = useMutation(api.participants.adminUpdate);
+  const remove = useMutation(api.participants.adminRemove);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(p.firstName);
+  const [level, setLevel] = useState<Level>(p.experience);
+  const [error, setError] = useState<string | null>(null);
+  const id = p.id as Id<"participants">;
+
+  if (editing) {
+    return (
+      <li className="flex flex-col gap-2 py-3">
+        <div className="flex gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="min-h-11 flex-1 rounded-xl border border-border px-3"
+            aria-label="First name"
+          />
+          <select
+            value={level}
+            onChange={(e) => setLevel(e.target.value as Level)}
+            className="min-h-11 rounded-xl border border-border bg-surface px-2"
+            aria-label="Experience"
+          >
+            {LEVELS.map((l) => (
+              <option key={l} value={l}>
+                {LEVEL_LABEL[l]}
+              </option>
+            ))}
+          </select>
+        </div>
+        {error ? <Notice tone="error">{error}</Notice> : null}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={async () => {
+              try {
+                await update({ token, id, firstName: name, experience: level });
+                setEditing(false);
+                setError(null);
+              } catch (e) {
+                setError(errorMessage(e));
+              }
+            }}
+          >
+            Save
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+            Cancel
+          </Button>
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <li className="flex items-center gap-2 py-2.5">
+      <span className="flex-1 font-semibold">
+        {p.firstName}
+        {p.isTest ? <span className="ml-1 rounded bg-ink/10 px-1 text-xs">TEST</span> : null}
+      </span>
+      <span className="text-[13px]">
+        <LevelPill level={p.experience} />
+      </span>
+      <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+        Edit
+      </Button>
+      {canRemove ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-label={`Remove ${p.firstName}`}
+          onClick={async () => {
+            if (await confirm({ title: `Remove ${p.firstName}?`, confirmLabel: "Remove", tone: "danger" })) {
+              await remove({ token, id }).catch((e) => setError(errorMessage(e)));
+            }
+          }}
+        >
+          ✕
+        </Button>
+      ) : null}
+      {error ? <Notice tone="error">{error}</Notice> : null}
+    </li>
+  );
+}

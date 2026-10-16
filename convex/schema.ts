@@ -1,0 +1,69 @@
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export const phaseValidator = v.union(
+  v.literal("setup"),
+  v.literal("team_reveal"),
+  v.literal("hackathon"),
+  v.literal("voting"),
+  v.literal("results_pending"),
+  v.literal("results"),
+);
+
+export const levelValidator = v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"));
+
+const prayerTime = v.object({ start: v.string(), jamaah: v.union(v.string(), v.null()) });
+export const prayersValidator = v.object({
+  fajr: prayerTime,
+  dhuhr: prayerTime,
+  asr: prayerTime,
+  maghrib: prayerTime,
+  isha: prayerTime,
+});
+
+export const timerValidator = v.object({
+  mode: v.union(v.literal("focus"), v.literal("break")),
+  cycle: v.number(),
+  remainingMs: v.number(),
+  endsAt: v.union(v.number(), v.null()),
+  pausedReason: v.union(v.literal("manual"), v.literal("salah"), v.null()),
+});
+
+export default defineSchema({
+  // Single row: the whole event's shared state.
+  event: defineTable({
+    phase: phaseValidator,
+    expectedParticipants: v.number(),
+    focusMinutes: v.number(),
+    breakMinutes: v.number(),
+    revealMinutes: v.number(),
+    sessionEndTime: v.union(v.string(), v.null()),
+    eventDate: v.string(),
+    timeZone: v.string(),
+    prayers: prayersValidator,
+    prayerSource: v.string(),
+    revealEndsAt: v.union(v.number(), v.null()),
+    revealHeldMs: v.union(v.number(), v.null()),
+    timer: timerValidator,
+  }),
+  participants: defineTable({
+    firstName: v.string(),
+    normalisedName: v.string(),
+    experience: levelValidator,
+    deviceId: v.union(v.string(), v.null()),
+    teamId: v.union(v.id("teams"), v.null()),
+    hasVoted: v.boolean(),
+    isTest: v.boolean(),
+  })
+    .index("by_name", ["normalisedName"])
+    .index("by_device", ["deviceId"]),
+  // `votes` is an aggregate counter only. No ballot (voter -> team) record exists anywhere.
+  teams: defineTable({
+    key: v.string(),
+    name: v.string(),
+    order: v.number(),
+    memberIds: v.array(v.id("participants")),
+    captainId: v.id("participants"),
+    votes: v.number(),
+  }),
+});

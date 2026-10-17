@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatClock, formatCountdown, zonedTimeToEpoch } from "../shared/time";
 import { DEFAULT_PRAYERS, salahStatus, validatePrayerTimes } from "../shared/salah";
-import { nextSession, pauseTimer, remainingAt, resumeTimer, startTimer } from "../shared/timer";
 
 const TZ = "Europe/London";
 const DATE = "2026-10-18";
@@ -46,28 +45,5 @@ describe("salah", () => {
   });
   it("returns null after the last jama'ah", () => {
     expect(salahStatus(DEFAULT_PRAYERS, DATE, TZ, at("21:00"))).toBeNull();
-  });
-});
-
-describe("timer", () => {
-  const d = { focusMs: 25 * 60_000, breakMs: 5 * 60_000 };
-
-  it("pauses and resumes from the exact remaining time", () => {
-    const t0 = startTimer(d, 1_000);
-    const paused = pauseTimer(t0, 1_000 + 60_000, "manual");
-    expect(paused.endsAt).toBeNull();
-    expect(paused.remainingMs).toBe(24 * 60_000);
-    expect(remainingAt(paused, 9_999_999)).toBe(24 * 60_000);
-    const resumed = resumeTimer(paused, 500_000);
-    expect(resumed.endsAt).toBe(500_000 + 24 * 60_000);
-    expect(resumed.pausedReason).toBeNull();
-  });
-
-  it("alternates focus and break anchored to the previous end", () => {
-    const t0 = startTimer(d, 0);
-    const b = nextSession(t0, d, t0.endsAt!);
-    expect(b).toMatchObject({ mode: "break", cycle: 1, endsAt: d.focusMs + d.breakMs });
-    const f = nextSession(b, d, b.endsAt!);
-    expect(f).toMatchObject({ mode: "focus", cycle: 2 });
   });
 });

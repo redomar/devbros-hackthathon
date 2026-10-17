@@ -7,38 +7,59 @@ import {
   DEFAULT_PRAYER_SOURCE,
   DEFAULT_TIME_ZONE,
 } from "../shared/salah";
-import { initialTimer, type Durations } from "../shared/timer";
+import { initialClock, type HackClock, type PlanSettings, type PrayerDay } from "../shared/hacking";
 
 export type EventDoc = Doc<"event">;
 export type Phase = EventDoc["phase"];
 
 export const DEFAULT_SETTINGS = {
   expectedParticipants: 9,
-  focusMinutes: 25,
-  breakMinutes: 5,
+  focusMinutes: 50,
+  breakMinutes: 10,
   revealMinutes: 3,
-  sessionEndTime: null,
+  hackingMinutes: 270,
+  prayerBreakMinutes: 10,
   eventDate: DEFAULT_EVENT_DATE,
   timeZone: DEFAULT_TIME_ZONE,
   prayers: DEFAULT_PRAYERS,
   prayerSource: DEFAULT_PRAYER_SOURCE,
 } satisfies Partial<EventDoc>;
 
-export function durations(e: Pick<EventDoc, "focusMinutes" | "breakMinutes">): Durations {
-  return { focusMs: e.focusMinutes * 60_000, breakMs: e.breakMinutes * 60_000 };
+type PlanFields = Pick<EventDoc, "focusMinutes" | "breakMinutes" | "hackingMinutes">;
+
+export function planSettings(e: PlanFields): PlanSettings {
+  return {
+    totalMs: (e.hackingMinutes ?? DEFAULT_SETTINGS.hackingMinutes) * 60_000,
+    focusMs: e.focusMinutes * 60_000,
+    breakMs: e.breakMinutes * 60_000,
+  };
 }
 
-export function freshEventFields(settings: typeof DEFAULT_SETTINGS | EventDoc) {
+export const prayerBreakMs = (e: Pick<EventDoc, "prayerBreakMinutes">) =>
+  (e.prayerBreakMinutes ?? DEFAULT_SETTINGS.prayerBreakMinutes) * 60_000;
+
+export const clockOf = (e: Pick<EventDoc, "clock">): HackClock => e.clock ?? initialClock();
+
+export const prayerDay = (e: Pick<EventDoc, "prayers" | "eventDate" | "timeZone">): PrayerDay => ({
+  prayers: e.prayers,
+  eventDate: e.eventDate,
+  timeZone: e.timeZone,
+});
+
+export function freshEventFields() {
   return {
     phase: "setup" as const,
     revealEndsAt: null,
     revealHeldMs: null,
-    timer: initialTimer(durations(settings)),
+    clock: initialClock(),
+    // Clear the legacy Pomodoro fields.
+    timer: undefined,
+    sessionEndTime: undefined,
   };
 }
 
 export function defaultEvent(): Omit<EventDoc, "_id" | "_creationTime"> {
-  return { ...DEFAULT_SETTINGS, ...freshEventFields(DEFAULT_SETTINGS) };
+  return { ...DEFAULT_SETTINGS, ...freshEventFields() };
 }
 
 export async function readEvent(ctx: QueryCtx): Promise<EventDoc | null> {

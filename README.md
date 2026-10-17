@@ -33,7 +33,7 @@ pnpm install
 pnpm dev:convex   # first run creates .env.local; keep running to push function changes
 pnpm dev          # http://localhost:5173
 npx convex env set ADMIN_TOKEN <any-dev-code>
-pnpm test         # allocator, Salah/time, timer + Convex integration tests
+pnpm test         # allocator, Salah/time, hacking clock + Convex integration tests
 pnpm rehearse     # end-to-end browser rehearsal against your dev backend
 pnpm typecheck && pnpm build
 ```
@@ -48,5 +48,5 @@ Push or merge to `main` and Netlify deploys automatically: Convex functions to p
 
 - **Teams:** `shared/fairness.ts` checks every possible split (1,680 for nine people) and picks at random among the most balanced. A 3/3/3 level mix always gives one of each level per team. Captains are then drawn uniformly from each team, ignoring experience.
 - **Votes:** `convex/voting.ts` increments a team counter and sets `hasVoted` in one serialisable transaction. No ballot record linking voter to team exists anywhere. Team totals are excluded from public queries until **Reveal**. This is *not* cryptographic anonymity: name-only identity is trust-based, and in a group of nine, timing and the room can still give votes away.
-- **Timer:** the server stores `endsAt`; a scheduled Convex function flips focus/break at that moment. Screens just count down to it using a server-clock offset, so a backgrounded Safari can't drift.
+- **Hacking clock:** the server stores hacking time done and when the current run started; every screen works out the block, countdown and finish time from that using a server-clock offset, so a backgrounded Safari can't drift. Prayer breaks pause it, so hacking always gets its full 4h 30m.
 - **Salah:** Birmingham Central Mosque's published times for 18 Oct 2026 are the defaults (`shared/salah.ts`); editable on the admin page.

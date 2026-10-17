@@ -15,7 +15,9 @@ export function AdminSettings({ state, token }: { state: PublicState; token: str
     focusMinutes: String(state.settings.focusMinutes),
     breakMinutes: String(state.settings.breakMinutes),
     revealMinutes: String(state.settings.revealMinutes),
-    sessionEndTime: state.settings.sessionEndTime ?? "",
+    hackingMinutes: String(state.settings.hackingMinutes),
+    prayerBreakMinutes: String(state.settings.prayerBreakMinutes),
+    eventDate: state.eventDate,
   }));
   const [prayers, setPrayers] = useState<PrayerTimes>(state.prayers);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -26,8 +28,8 @@ export function AdminSettings({ state, token }: { state: PublicState; token: str
       {label}
       <input
         className={input}
-        inputMode={key === "sessionEndTime" ? "text" : "numeric"}
-        placeholder={key === "sessionEndTime" ? "HH:mm (optional)" : undefined}
+        inputMode={key === "eventDate" ? "text" : "numeric"}
+        placeholder={key === "eventDate" ? "YYYY-MM-DD" : undefined}
         value={s[key]}
         onChange={(e) => setS({ ...s, [key]: e.target.value })}
       />
@@ -40,7 +42,9 @@ export function AdminSettings({ state, token }: { state: PublicState; token: str
       <h2 className="font-display text-xl font-bold">Settings</h2>
       <div className="grid grid-cols-2 gap-3">
         {field("expectedParticipants", "Expected brothers")}
-        {field("sessionEndTime", "Hacking ends at")}
+        {field("eventDate", "Event date", "Salah times apply to this day")}
+        {field("hackingMinutes", "Hacking time (min)", "270 = 4h 30m")}
+        {field("prayerBreakMinutes", "Prayer break (min)")}
         {field("focusMinutes", "Focus (min)")}
         {field("breakMinutes", "Break (min)")}
         {field("revealMinutes", "Reveal countdown (min)", "0 = start manually")}
@@ -94,10 +98,12 @@ export function AdminSettings({ state, token }: { state: PublicState; token: str
               focusMinutes: Number(s.focusMinutes),
               breakMinutes: Number(s.breakMinutes),
               revealMinutes: Number(s.revealMinutes),
-              sessionEndTime: s.sessionEndTime.trim() || null,
+              hackingMinutes: Number(s.hackingMinutes),
+              prayerBreakMinutes: Number(s.prayerBreakMinutes),
+              eventDate: s.eventDate.trim(),
               prayers,
             });
-            setMessage({ tone: "success", text: "Saved. New timer lengths apply from the next session." });
+            setMessage({ tone: "success", text: "Saved. The hacking plan updates straight away." });
           } catch (e) {
             setMessage({ tone: "error", text: errorMessage(e) });
           } finally {

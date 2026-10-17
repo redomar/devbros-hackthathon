@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { defaultEvent, isAdminToken, readEvent } from "./model";
+import { DEFAULT_SETTINGS, clockOf, defaultEvent, isAdminToken, readEvent } from "./model";
 
 /**
  * Everything the big screen and phones may see. Device ids, per-voter status and vote counts
@@ -22,7 +22,8 @@ export const publicState = query({
         focusMinutes: event.focusMinutes,
         breakMinutes: event.breakMinutes,
         revealMinutes: event.revealMinutes,
-        sessionEndTime: event.sessionEndTime,
+        hackingMinutes: event.hackingMinutes ?? DEFAULT_SETTINGS.hackingMinutes,
+        prayerBreakMinutes: event.prayerBreakMinutes ?? DEFAULT_SETTINGS.prayerBreakMinutes,
       },
       eventDate: event.eventDate,
       timeZone: event.timeZone,
@@ -30,7 +31,7 @@ export const publicState = query({
       prayerSource: event.prayerSource,
       revealEndsAt: event.revealEndsAt,
       revealHeldMs: event.revealHeldMs,
-      timer: event.timer,
+      clock: clockOf(event),
       participants: participants
         .sort((a, b) => a._creationTime - b._creationTime)
         .map((p) => ({

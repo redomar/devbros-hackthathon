@@ -21,7 +21,25 @@ export const prayersValidator = v.object({
   isha: prayerTime,
 });
 
-export const timerValidator = v.object({
+export const prayerValidator = v.union(
+  v.literal("fajr"),
+  v.literal("dhuhr"),
+  v.literal("asr"),
+  v.literal("maghrib"),
+  v.literal("isha"),
+);
+
+/** The hacking clock (see shared/hacking.ts): counts hacking time, paused by prayer breaks. */
+export const clockValidator = v.object({
+  doneMs: v.number(),
+  runningSince: v.union(v.number(), v.null()),
+  pausedReason: v.union(v.literal("manual"), v.literal("prayer"), v.null()),
+  prayer: v.union(v.object({ prayer: prayerValidator, endsAt: v.number() }), v.null()),
+  prayersTaken: v.array(v.object({ prayer: prayerValidator, atMs: v.number() })),
+});
+
+// Legacy (v1.1 Pomodoro loop). Optional so existing event rows still validate; cleared on reset.
+const legacyTimerValidator = v.object({
   mode: v.union(v.literal("focus"), v.literal("break")),
   cycle: v.number(),
   remainingMs: v.number(),
@@ -37,14 +55,18 @@ export default defineSchema({
     focusMinutes: v.number(),
     breakMinutes: v.number(),
     revealMinutes: v.number(),
-    sessionEndTime: v.union(v.string(), v.null()),
+    // Optional so rows created before the hacking clock still validate; defaults in convex/model.ts.
+    hackingMinutes: v.optional(v.number()),
+    prayerBreakMinutes: v.optional(v.number()),
     eventDate: v.string(),
     timeZone: v.string(),
     prayers: prayersValidator,
     prayerSource: v.string(),
     revealEndsAt: v.union(v.number(), v.null()),
     revealHeldMs: v.union(v.number(), v.null()),
-    timer: timerValidator,
+    clock: v.optional(clockValidator),
+    timer: v.optional(legacyTimerValidator),
+    sessionEndTime: v.optional(v.union(v.string(), v.null())),
   }),
   participants: defineTable({
     firstName: v.string(),

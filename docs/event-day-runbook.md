@@ -29,4 +29,5 @@
 - **Someone voted wrongly / disputes:** **Restart voting** wipes all totals and everyone votes again. Single ballots can't be edited, by design.
 - **Started voting by mistake:** **Back to hacking** (clears any votes cast).
 - **Someone can't vote "as themselves":** they use *Not you? Enter your name* and pick their name.
+- **Unsuitable or mistyped team name:** `/admin` → *Team names* → **Rename** or **Reset**.
 - **Lost the organiser code:** `npx convex env get ADMIN_TOKEN --prod`.

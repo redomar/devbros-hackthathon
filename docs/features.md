@@ -32,6 +32,7 @@ Status key: ✅ done · 🟡 partly done · ⬜ not started
 - ✅ 3–12 people, always 3 teams with sizes differing by at most one. Explicit confirmation when the count ≠ expected.
 - ✅ Fixed identities: Emerald ◆, Sapphire ●, Amethyst ▲ (colour + symbol, never colour alone).
 - ✅ Draw animation: chips hop around then fly into the real team cards; captains crowned (v1.1.0).
+- ✅ Captains rename their team from *My team* on their phone, from the draw until voting opens; the big screen announces the new name; organisers can fix or reset names on `/admin` (decision #18).
 - ✅ Reshuffle and *Reopen check-in* (for latecomers) before hacking starts.
 - ✅ Organiser can fix a name or level before hacking starts.
 
@@ -79,7 +80,7 @@ Status key: ✅ done · 🟡 partly done · ⬜ not started
 - ✅ Convex as the whole backend; all state durable, every screen live over WebSocket.
 - ✅ Reconnecting banner on phones; unconfirmed submissions never shown as accepted.
 - ✅ localStorage failures fall back to memory.
-- ✅ 32 Vitest tests (allocator, Salah/time, timer, Convex integration), `pnpm rehearse` Playwright run, CI on PRs, Netlify auto-deploy from `main`.
+- ✅ 51 Vitest tests (allocator, Salah/time, timer, Convex integration), `pnpm rehearse` Playwright run, CI on PRs, Netlify auto-deploy from `main`.
 - ✅ Docs: README, CONTRIBUTING, architecture, decisions, status, event-day runbook, changelog.
 
 ## Still to do
@@ -92,7 +93,6 @@ Status key: ✅ done · 🟡 partly done · ⬜ not started
 
 ### Nice to have (already planned)
 
-- ⬜ Captains rename their team from their phone during hacking.
 - ⬜ Organiser-only "replay reveal" on the display after a reload.
 - ⬜ Optional one-time vote code, if name-only voting turns out to be a problem.
 

@@ -79,7 +79,7 @@ export function JoinPage() {
         {state.phase === "setup" ? (
           <Notice>Teams will be drawn once everyone has arrived. Watch the big screen!</Notice>
         ) : null}
-        <MyTeam state={state} participantId={me.id} />
+        <MyTeam state={state} participantId={me.id} deviceId={deviceId} />
         {state.phase === "voting" ? <VoteLink /> : null}
       </PhoneShell>
     );

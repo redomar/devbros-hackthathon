@@ -4,6 +4,10 @@ All notable changes to Dev Bros: the Hackthathon. Versions follow [Semantic Vers
 
 ## [Unreleased]
 
+### Added
+
+- **Captains can rename their team.** The captain sees **Rename your team** on *My team* (on `/join` or `/vote`), from the draw until voting opens. The colour and symbol stay the same, and the big screen shows "Team Emerald is now Byte Club" for a few seconds. Organisers can fix or reset any name in a new *Team names* section on `/admin`.
+
 ### Changed
 
 - **Hacking clock replaces the Pomodoro loop.** Hacking now runs for a fixed 4h 30m of hacking time, in four 50-minute focus blocks with 10-minute breaks, then a final 30-minute block. The big screen shows it as a clock dial: blocks around the ring, a hand showing how far through you are, the current block's countdown in the middle, and the whole screen tinted green for focus, blue for a break and gold for Salah. The side column shows what's up next (in clock time), the next Salah, hours hacked and the expected finish.

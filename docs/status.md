@@ -13,7 +13,8 @@
 - Voting: new QR, device or name identity, own team blocked server-side, one vote per person, aggregate-only storage, hidden totals, organiser sees who's still to vote.
 - Results: close and reveal as separate steps, 3-2-1 countdown, winner or joint-winner spotlight with confetti, ranked scoreboard; skippable; reduced-motion respected.
 - Organiser tray on the iPad + `/admin` page; confirmations on every irreversible step; reset event.
-- 32 unit/integration tests, `pnpm rehearse` end-to-end, CI, runbook; merges to `main` auto-deploy via Netlify.
+- Captains rename their team from their phone (after the draw, until voting opens); the big screen announces it; organisers can fix or reset a name on `/admin`.
+- 51 unit/integration tests, `pnpm rehearse` end-to-end, CI, runbook; merges to `main` auto-deploy via Netlify.
 
 ## Before Sunday (must do)
 
@@ -23,7 +24,6 @@
 
 ## Nice to have (only if time allows; keep PRs small)
 
-- Captains rename their team from their phone during hacking.
 - Organiser-only "replay reveal" on the display after a reload.
 - Optional one-time vote code if name-only voting turns out to be a problem.
 

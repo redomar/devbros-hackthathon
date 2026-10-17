@@ -12,6 +12,7 @@ import type * as event from "../event.js";
 import type * as flow from "../flow.js";
 import type * as model from "../model.js";
 import type * as participants from "../participants.js";
+import type * as teams from "../teams.js";
 import type * as voting from "../voting.js";
 
 import type {
@@ -25,6 +26,7 @@ declare const fullApi: ApiFromModules<{
   flow: typeof flow;
   model: typeof model;
   participants: typeof participants;
+  teams: typeof teams;
   voting: typeof voting;
 }>;
 

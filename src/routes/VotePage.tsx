@@ -49,7 +49,7 @@ export function VotePage() {
         <PhoneHeading eyebrow="Voting" title="Voting hasn't opened yet">
           A new QR code will appear on the big screen when it does.
         </PhoneHeading>
-        {me ? <MyTeam state={state} participantId={me.id} /> : <Link className="font-semibold text-primary underline" to="/join">Go to check-in</Link>}
+        {me ? <MyTeam state={state} participantId={me.id} deviceId={deviceId} /> : <Link className="font-semibold text-primary underline" to="/join">Go to check-in</Link>}
       </PhoneShell>
     );
   }

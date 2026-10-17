@@ -3,12 +3,14 @@ import { Link, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { useEventState, type PublicParticipant, type PublicState } from "../lib/useEvent";
+import { useEventState, type PublicParticipant, type PublicState, type PublicTeam } from "../lib/useEvent";
 import { useNow } from "../lib/clock";
 import { getAdminToken, setAdminToken } from "../lib/storage";
 import { errorMessage } from "../lib/errors";
 import { joinUrl, voteUrl } from "../lib/urls";
 import { LEVELS, LEVEL_LABEL, type Level } from "../../shared/levels";
+import { TEAM_NAME_MAX_LENGTH, defaultTeamName } from "../../shared/teams";
+import { teamSymbol } from "../components/TeamCard";
 import { PhoneHeading, PhoneShell } from "../components/PhoneShell";
 import { OrganiserControls } from "../components/OrganiserControls";
 import { AdminSettings } from "../components/AdminSettings";
@@ -119,6 +121,18 @@ function AdminDashboard({ state, token, onSignOut }: { state: PublicState; token
         <Card className="p-4">
           <h2 className="font-semibold">Still to vote ({pending.length})</h2>
           <p className="text-sm text-ink-muted">{pending.length ? pending.join(", ") : "Everyone has voted."}</p>
+        </Card>
+      ) : null}
+
+      {state.teams.length && state.phase !== "results" ? (
+        <Card className="flex flex-col gap-2 p-4">
+          <h2 className="font-display text-xl font-bold">Team names</h2>
+          <p className="text-sm text-ink-muted">Captains can rename their team from their phone until voting opens. Fix or reset a name here.</p>
+          <ul className="flex flex-col divide-y divide-border">
+            {state.teams.map((t) => (
+              <TeamNameRow key={t.id} team={t} token={token} />
+            ))}
+          </ul>
         </Card>
       ) : null}
 
@@ -300,6 +314,68 @@ function ParticipantRow({
           ✕
         </Button>
       ) : null}
+      {error ? <Notice tone="error">{error}</Notice> : null}
+    </li>
+  );
+}
+
+function TeamNameRow({ team, token }: { team: PublicTeam; token: string }) {
+  const rename = useMutation(api.teams.adminRename);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(team.name);
+  const [error, setError] = useState<string | null>(null);
+  const isDefault = team.name === defaultTeamName(team.key);
+  const save = async (next: string | null) => {
+    try {
+      await rename({ token, teamId: team.id, name: next });
+      setEditing(false);
+      setError(null);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+
+  return (
+    <li className="flex flex-col gap-2 py-2.5">
+      {editing ? (
+        <div className="flex gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={TEAM_NAME_MAX_LENGTH}
+            className="min-h-11 min-w-0 flex-1 rounded-xl border border-border px-3"
+            aria-label={`New name for ${team.name}`}
+          />
+          <Button size="sm" onClick={() => save(name)}>
+            Save
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+            Cancel
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <span className="flex-1 font-semibold">
+            {teamSymbol(team.key)} {team.name}
+            {isDefault ? null : <span className="ml-1 font-normal text-ink-muted">({defaultTeamName(team.key)})</span>}
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setName(team.name);
+              setEditing(true);
+            }}
+          >
+            Rename
+          </Button>
+          {isDefault ? null : (
+            <Button size="sm" variant="ghost" onClick={() => save(null)}>
+              Reset
+            </Button>
+          )}
+        </div>
+      )}
       {error ? <Notice tone="error">{error}</Notice> : null}
     </li>
   );

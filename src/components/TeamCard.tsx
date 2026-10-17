@@ -40,7 +40,7 @@ export const TeamCard = forwardRef<
         <span aria-hidden className="text-[1.3em]">
           {teamSymbol(team.key)}
         </span>
-        <span className="font-display text-[1.6em] font-bold tracking-tight">{team.name}</span>
+        <span className="min-w-0 truncate font-display text-[1.6em] font-bold tracking-tight" title={team.name}>{team.name}</span>
       </div>
       <ul className="flex flex-1 flex-col gap-[0.7em] p-[1.1em]">
         {members.map((p) => {

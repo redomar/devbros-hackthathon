@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import schema from "../convex/schema";
 import { api } from "../convex/_generated/api";
 import { zonedTimeToEpoch } from "../shared/time";
+import { validateTeamName } from "../shared/teams";
 
 const modules = import.meta.glob("../convex/**/*.ts");
 const token = "test-token-1234";
@@ -280,5 +281,65 @@ describe("hacking clock", () => {
     expect(c).toMatchObject({ runningSince: null, prayer: null, doneMs: 30 * MIN });
     await advance(t, 10 * MIN);
     expect((await state(t)).clock.runningSince).toBeNull();
+  });
+});
+
+describe("team names", () => {
+  // registerNine gives BrotherA… device-0-xxxxxxxx, BrotherB… device-1-xxxxxxxx, and so on.
+  const deviceOf = (firstName: string) => `device-${firstName.charCodeAt(7) - 65}-xxxxxxxx`;
+
+  async function drawn(t: T) {
+    await registerNine(t);
+    await t.mutation(api.flow.makeTeams, { token });
+    const s = await t.query(api.event.publicState, {});
+    const team = s.teams[0];
+    const nameOf = (id: string) => s.participants.find((p) => p.id === id)!.firstName;
+    return {
+      s,
+      team,
+      captain: deviceOf(nameOf(team.captainId)),
+      member: deviceOf(nameOf(team.memberIds.find((id) => id !== team.captainId)!)),
+    };
+  }
+
+  it("lets the captain rename their team during hacking", async () => {
+    const t = convexTest(schema, modules);
+    const { team, captain } = await drawn(t);
+    await t.mutation(api.flow.startHackathon, { token });
+    await t.mutation(api.teams.rename, { deviceId: captain, name: "  Byte   Club " });
+    const s = await t.query(api.event.publicState, {});
+    expect(s.teams.find((x) => x.id === team.id)).toMatchObject({ name: "Byte Club", key: team.key });
+  });
+
+  it("only lets the captain rename", async () => {
+    const t = convexTest(schema, modules);
+    const { member } = await drawn(t);
+    await expect(t.mutation(api.teams.rename, { deviceId: member, name: "Byte Club" })).rejects.toThrow(/captain/);
+  });
+
+  it("rejects a name another team already has", async () => {
+    const t = convexTest(schema, modules);
+    const { s, captain } = await drawn(t);
+    await expect(t.mutation(api.teams.rename, { deviceId: captain, name: s.teams[1].name.toUpperCase() })).rejects.toThrow(/already has/);
+  });
+
+  it("locks names once voting opens, but organisers can still fix or reset one", async () => {
+    const t = convexTest(schema, modules);
+    const { team, captain } = await drawn(t);
+    await t.mutation(api.teams.rename, { deviceId: captain, name: "Byte Club" });
+    await t.mutation(api.flow.startHackathon, { token });
+    await t.mutation(api.flow.startVoting, { token });
+    await expect(t.mutation(api.teams.rename, { deviceId: captain, name: "Late Name" })).rejects.toThrow(/before voting opens/);
+    await expect(t.mutation(api.teams.adminRename, { token: "wrong", teamId: team.id, name: null })).rejects.toThrow(/not recognised/);
+    await t.mutation(api.teams.adminRename, { token, teamId: team.id, name: null });
+    expect((await t.query(api.event.publicState, {})).teams.find((x) => x.id === team.id)!.name).toBe(team.name);
+  });
+
+  it("validates names", () => {
+    expect(validateTeamName("Byte Club")).toBeNull();
+    expect(validateTeamName("404 Brothers!")).toBeNull();
+    expect(validateTeamName("x")).toMatch(/enter/);
+    expect(validateTeamName("a".repeat(25))).toMatch(/24 characters/);
+    expect(validateTeamName("<script>")).toMatch(/only/);
   });
 });

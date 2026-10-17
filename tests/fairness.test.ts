@@ -76,5 +76,5 @@ describe("captains", () => {
       expect(counts[level] / (runs * 3)).toBeGreaterThan(0.28);
       expect(counts[level] / (runs * 3)).toBeLessThan(0.38);
     }
-  });
+  }, 20_000); // 3000 exhaustive allocations: ~5s, so the default timeout is too tight.
 });

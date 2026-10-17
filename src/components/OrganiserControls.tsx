@@ -3,7 +3,9 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { PublicState } from "../lib/useEvent";
 import { errorMessage } from "../lib/errors";
-import { formatCountdown } from "../../shared/time";
+import { formatClock, formatCountdown } from "../../shared/time";
+import { PRAYER_LABEL } from "../../shared/salah";
+import { hacking } from "../lib/hacking";
 import { teamSizes } from "../../shared/fairness";
 import { Button, Notice } from "./ui";
 import { useConfirm } from "./ConfirmDialog";
@@ -24,6 +26,7 @@ export function OrganiserControls({ state, token, now, pendingVoters }: Props) {
     continueReveal: useMutation(api.flow.continueReveal),
     startHackathon: useMutation(api.flow.startHackathon),
     pause: useMutation(api.flow.pause),
+    startPrayerBreak: useMutation(api.flow.startPrayerBreak),
     resume: useMutation(api.flow.resume),
     skipSession: useMutation(api.flow.skipSession),
     restartSession: useMutation(api.flow.restartSession),
@@ -52,7 +55,6 @@ export function OrganiserControls({ state, token, now, pendingVoters }: Props) {
 
   const count = state.participants.length;
   const expected = state.settings.expectedParticipants;
-  const paused = state.timer.endsAt === null;
   let buttons: ReactNode = null;
 
   switch (state.phase) {
@@ -141,49 +143,73 @@ export function OrganiserControls({ state, token, now, pendingVoters }: Props) {
       );
       break;
     }
-    case "hackathon":
-      buttons = (
+    case "hackathon": {
+      const h = hacking(state, now);
+      const { status } = h;
+      const blockName = status.block.kind === "focus" ? `focus ${status.block.number}` : "break";
+      buttons = status.prayer ? (
         <>
-          {paused ? (
+          <Button size="lg" busy={busy === "resume"} onClick={() => run("resume", () => m.resume({ token }))}>
+            End {PRAYER_LABEL[status.prayer.prayer]} break now
+          </Button>
+          <Status>
+            {PRAYER_LABEL[status.prayer.prayer]} break · {formatCountdown(status.prayerRemainingMs)} left, then hacking resumes
+          </Status>
+        </>
+      ) : (
+        <>
+          {h.callable && !status.finished ? (
+            <Button size="lg" variant="gold" busy={busy === "prayer"} onClick={() => run("prayer", () => m.startPrayerBreak({ token, prayer: h.callable! }))}>
+              Start {PRAYER_LABEL[h.callable]} break · {state.settings.prayerBreakMinutes} min
+            </Button>
+          ) : h.nextPrayer && !status.finished ? (
+            <Button size="lg" variant="secondary" disabled>
+              {PRAYER_LABEL[h.nextPrayer.prayer]} break from {formatClock(h.nextPrayer.startAt, state.timeZone)}
+            </Button>
+          ) : null}
+          {status.finished ? null : status.running ? (
+            <Button size="lg" variant="secondary" busy={busy === "pause"} onClick={() => run("pause", () => m.pause({ token }))}>
+              Pause
+            </Button>
+          ) : (
             <Button size="lg" busy={busy === "resume"} onClick={() => run("resume", () => m.resume({ token }))}>
               Resume
             </Button>
-          ) : (
-            <Button size="lg" variant="secondary" busy={busy === "pause"} onClick={() => run("pause", () => m.pause({ token, reason: "manual" }))}>
-              Pause
-            </Button>
           )}
-          {state.timer.pausedReason !== "salah" ? (
-            <Button size="lg" variant="gold" busy={busy === "salah"} onClick={() => run("salah", () => m.pause({ token, reason: "salah" }))}>
-              Pause for Salah
-            </Button>
-          ) : null}
-          <Button
-            variant="secondary"
-            busy={busy === "skip"}
-            onClick={() =>
-              guarded(
-                "skip",
-                { title: `Skip to ${state.timer.mode === "focus" ? "break" : "focus"}?`, confirmLabel: "Skip" },
-                () => m.skipSession({ token }),
-              )
-            }
-          >
-            Skip to {state.timer.mode === "focus" ? "break" : "focus"}
-          </Button>
-          <Button
-            variant="ghost"
-            busy={busy === "restart"}
-            onClick={() =>
-              guarded(
-                "restart",
-                { title: `Restart this ${state.timer.mode} session?`, body: "The countdown goes back to its full length.", confirmLabel: "Restart" },
-                () => m.restartSession({ token }),
-              )
-            }
-          >
-            Restart session
-          </Button>
+          {status.finished ? null : (
+            <>
+              <Button
+                variant="secondary"
+                busy={busy === "skip"}
+                onClick={() =>
+                  guarded(
+                    "skip",
+                    {
+                      title: status.next ? `Skip to ${status.next.kind === "focus" ? `focus ${status.next.number}` : "the break"}?` : "End hacking now?",
+                      body: "Hacking time jumps to the end of this block.",
+                      confirmLabel: "Skip",
+                    },
+                    () => m.skipSession({ token }),
+                  )
+                }
+              >
+                Skip {blockName}
+              </Button>
+              <Button
+                variant="ghost"
+                busy={busy === "restart"}
+                onClick={() =>
+                  guarded(
+                    "restart",
+                    { title: `Restart ${blockName}?`, body: "The countdown goes back to this block's full length.", confirmLabel: "Restart" },
+                    () => m.restartSession({ token }),
+                  )
+                }
+              >
+                Restart {blockName}
+              </Button>
+            </>
+          )}
           <Button
             variant="primary"
             busy={busy === "vote"}
@@ -192,7 +218,9 @@ export function OrganiserControls({ state, token, now, pendingVoters }: Props) {
                 "vote",
                 {
                   title: "Start voting?",
-                  body: "Stops the timer and shows the voting QR code. Everyone votes once for another team.",
+                  body: status.finished
+                    ? "Shows the voting QR code. Everyone votes once for another team."
+                    : "Hacking time isn't over yet. This stops the clock and shows the voting QR code.",
                   confirmLabel: "Start voting",
                   tone: "gold",
                 },
@@ -202,9 +230,15 @@ export function OrganiserControls({ state, token, now, pendingVoters }: Props) {
           >
             Start voting
           </Button>
+          <Status>
+            {status.finished
+              ? "Hacking time is over"
+              : `${status.prayer ? "" : `${blockName[0].toUpperCase()}${blockName.slice(1)} · ${formatCountdown(status.blockRemainingMs)} left · `}finishes ~${formatClock(h.projection.finishAt, state.timeZone)}`}
+          </Status>
         </>
       );
       break;
+    }
     case "voting": {
       const missing = state.eligibleVoters - state.votesReceived;
       buttons = (

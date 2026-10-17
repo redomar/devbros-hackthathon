@@ -1,8 +1,9 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import schema from "../convex/schema";
 import { api } from "../convex/_generated/api";
+import { zonedTimeToEpoch } from "../shared/time";
 
 const modules = import.meta.glob("../convex/**/*.ts");
 const token = "test-token-1234";
@@ -169,18 +170,115 @@ describe("voting", () => {
   });
 });
 
-describe("timer", () => {
-  it("pause and resume keep the remaining time", async () => {
-    const t = convexTest(schema, modules);
+describe("hacking clock", () => {
+  const MIN = 60_000;
+  const at = (hhmm: string) => zonedTimeToEpoch("2026-10-18", hhmm, "Europe/London");
+  const clockAt = (hhmm: string) => vi.setSystemTime(at(hhmm));
+  const state = (t: T) => t.query(api.event.publicState, {});
+  /** Advance fake time and run any scheduled jobs that fall due. */
+  const advance = async (t: T, ms: number) => {
+    vi.advanceTimersByTime(ms);
+    await t.finishInProgressScheduledFunctions();
+  };
+
+  async function startHacking(t: T) {
     await registerNine(t);
     await t.mutation(api.flow.makeTeams, { token });
     await t.mutation(api.flow.startHackathon, { token });
-    await t.mutation(api.flow.pause, { token, reason: "salah" });
-    const paused = (await t.query(api.event.publicState, {})).timer;
-    expect(paused.endsAt).toBeNull();
-    expect(paused.pausedReason).toBe("salah");
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    clockAt("12:30");
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("pause and resume keep the hacking time", async () => {
+    const t = convexTest(schema, modules);
+    await startHacking(t);
+    vi.advanceTimersByTime(20 * MIN);
+    await t.mutation(api.flow.pause, { token });
+    vi.advanceTimersByTime(15 * MIN);
+    const paused = (await state(t)).clock;
+    expect(paused).toMatchObject({ doneMs: 20 * MIN, runningSince: null, pausedReason: "manual" });
     await t.mutation(api.flow.resume, { token });
-    const running = (await t.query(api.event.publicState, {})).timer;
-    expect(running.endsAt).not.toBeNull();
+    expect((await state(t)).clock.runningSince).toBe(at("12:30") + 35 * MIN);
+  });
+
+  it("refuses a prayer break before the prayer begins", async () => {
+    const t = convexTest(schema, modules);
+    await startHacking(t);
+    await expect(t.mutation(api.flow.startPrayerBreak, { token, prayer: "dhuhr" })).rejects.toThrow(/hasn't begun yet \(begins 12:58\)/);
+    await expect(t.mutation(api.flow.startPrayerBreak, { token, prayer: "asr" })).rejects.toThrow(/hasn't begun/);
+  });
+
+  it("a prayer break pauses hacking, resumes by itself after 10 minutes and can't be repeated", async () => {
+    const t = convexTest(schema, modules);
+    await startHacking(t);
+    await advance(t, 38 * MIN); // 13:08, Dhuhr began at 12:58
+    await t.mutation(api.flow.startPrayerBreak, { token, prayer: "dhuhr" });
+    const during = (await state(t)).clock;
+    expect(during).toMatchObject({ doneMs: 38 * MIN, runningSince: null, pausedReason: "prayer" });
+    expect(during.prayer).toEqual({ prayer: "dhuhr", endsAt: at("13:18") });
+    expect(during.prayersTaken).toEqual([{ prayer: "dhuhr", atMs: 38 * MIN }]);
+    await expect(t.mutation(api.flow.pause, { token })).rejects.toThrow(/prayer break is running/);
+
+    await advance(t, 10 * MIN);
+    const after = (await state(t)).clock;
+    expect(after).toMatchObject({ doneMs: 38 * MIN, runningSince: at("13:18"), pausedReason: null, prayer: null });
+    await expect(t.mutation(api.flow.startPrayerBreak, { token, prayer: "dhuhr" })).rejects.toThrow(/already been taken/);
+  });
+
+  it("an organiser can end a prayer break early", async () => {
+    const t = convexTest(schema, modules);
+    await startHacking(t);
+    await advance(t, 30 * MIN); // 13:00
+    await t.mutation(api.flow.startPrayerBreak, { token, prayer: "dhuhr" });
+    await advance(t, 4 * MIN);
+    await t.mutation(api.flow.resume, { token });
+    expect((await state(t)).clock).toMatchObject({ doneMs: 30 * MIN, runningSince: at("13:04"), prayer: null });
+    // The original auto-resume job fires later and must not touch the running clock.
+    await advance(t, 10 * MIN);
+    expect((await state(t)).clock).toMatchObject({ doneMs: 30 * MIN, runningSince: at("13:04") });
+  });
+
+  it("gives 4h 30m of hacking and finishes at 17:20 with Dhuhr and Asr breaks", async () => {
+    const t = convexTest(schema, modules);
+    await startHacking(t);
+    await advance(t, 38 * MIN); // 13:08
+    await t.mutation(api.flow.startPrayerBreak, { token, prayer: "dhuhr" });
+    await advance(t, 10 * MIN); // 13:18, resumed
+    clockAt("16:20");
+    await t.mutation(api.flow.startPrayerBreak, { token, prayer: "asr" });
+    await advance(t, 10 * MIN); // 16:30, resumed
+    await advance(t, 49 * MIN); // 17:19
+    expect((await state(t)).clock.runningSince).not.toBeNull();
+    await advance(t, 1 * MIN); // 17:20
+    const end = (await state(t)).clock;
+    expect(end).toMatchObject({ doneMs: 270 * MIN, runningSince: null });
+    expect(end.prayersTaken.map((p) => p.prayer)).toEqual(["dhuhr", "asr"]);
+  });
+
+  it("skips to the next block and restarts the current one", async () => {
+    const t = convexTest(schema, modules);
+    await startHacking(t);
+    await advance(t, 20 * MIN);
+    await t.mutation(api.flow.skipSession, { token });
+    expect((await state(t)).clock).toMatchObject({ doneMs: 50 * MIN, runningSince: at("12:50") });
+    await advance(t, 4 * MIN);
+    await t.mutation(api.flow.restartSession, { token });
+    expect((await state(t)).clock).toMatchObject({ doneMs: 50 * MIN, runningSince: at("12:54") });
+  });
+
+  it("starting voting stops the clock and ends a prayer break", async () => {
+    const t = convexTest(schema, modules);
+    await startHacking(t);
+    await advance(t, 30 * MIN);
+    await t.mutation(api.flow.startPrayerBreak, { token, prayer: "dhuhr" });
+    await t.mutation(api.flow.startVoting, { token });
+    const c = (await state(t)).clock;
+    expect(c).toMatchObject({ runningSince: null, prayer: null, doneMs: 30 * MIN });
+    await advance(t, 10 * MIN);
+    expect((await state(t)).clock.runningSince).toBeNull();
   });
 });

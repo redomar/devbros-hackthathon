@@ -4,6 +4,12 @@ All notable changes to Dev Bros: the Hackthathon. Versions follow [Semantic Vers
 
 ## [Unreleased]
 
+### Changed
+
+- **Hacking clock replaces the Pomodoro loop.** Hacking now runs for a fixed 4h 30m of hacking time, in four 50-minute focus blocks with 10-minute breaks, then a final 30-minute block. The big screen shows it as a clock dial: blocks around the ring, a hand showing how far through you are, the current block's countdown in the middle, and the whole screen tinted green for focus, blue for a break and gold for Salah. The side column shows what's up next (in clock time), the next Salah, hours hacked and the expected finish.
+- **Prayer breaks.** Once Dhuhr or Asr begins, organisers get a **Start Dhuhr break** / **Start Asr break** button. It pauses hacking for 10 minutes, then hacking resumes by itself from where it stopped (or early with **End … break now**). Each prayer's break is taken once, and is marked on the dial. From a 12:30 start, hacking finishes at about 17:20.
+- **Settings:** new *Hacking time*, *Prayer break* and *Event date* fields; defaults are now 50/10. *Hacking ends at* and *Pause for Salah* are gone.
+
 ## [1.1.0] - 2026-10-16
 
 ### Changed

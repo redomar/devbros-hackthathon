@@ -29,6 +29,11 @@ mkdirSync(OUT, { recursive: true });
 
 const convex = new ConvexHttpClient(convexUrl);
 await convex.mutation("flow:resetEvent", { token: TOKEN, confirm: "RESET" });
+// Prayer breaks only open once a prayer begins on the event date, so rehearse against today's
+// timetable and put the real date back afterwards.
+const { eventDate: realEventDate } = await convex.query("event:publicState", {});
+const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date());
+await convex.mutation("flow:updateSettings", { token: TOKEN, eventDate: today });
 
 const browser = await chromium.launch(
   process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
@@ -101,15 +106,25 @@ try {
   await yusuf.getByText("You're in").waitFor();
   await shot(yusuf, "06-phone-my-team");
 
-  step("hackathon, Salah pause, resume");
+  step("hackathon, pause/resume, prayer break");
   await admin.getByRole("button", { name: "Start hackathon now" }).click();
   await ipad.getByText("Focus", { exact: true }).waitFor();
   await shot(ipad, "07-ipad-hackathon");
   await shot(tv, "07b-tv-hackathon");
-  await admin.getByRole("button", { name: "Pause for Salah" }).click();
-  await ipad.getByText("Paused for Salah", { exact: true }).waitFor();
-  await shot(ipad, "08-ipad-salah-pause");
-  await admin.getByRole("button", { name: "Resume" }).click();
+  await admin.getByRole("button", { name: "Pause", exact: true }).click();
+  await ipad.getByText("Waiting for the organisers").waitFor();
+  await admin.getByRole("button", { name: "Resume", exact: true }).click();
+  const prayerButton = admin.getByRole("button", { name: /^Start \w+ break/ });
+  if (await prayerButton.count()) {
+    await prayerButton.click();
+    await ipad.getByText("Hacking is paused").waitFor();
+    await shot(ipad, "08-ipad-prayer-break");
+    await shot(admin, "08b-admin-prayer-break");
+    await admin.getByRole("button", { name: /^End \w+ break now/ }).click();
+    await ipad.getByText("Focus", { exact: true }).waitFor();
+  } else {
+    step("  (no prayer is in time right now, so the prayer break was skipped)");
+  }
 
   step("voting: device vote, name vote, own team blocked");
   await admin.getByRole("button", { name: "Start voting" }).click();
@@ -149,6 +164,7 @@ try {
 } catch (e) {
   errors.push(`STEP FAILED: ${e.message.split("\n")[0]}`);
 } finally {
+  await convex.mutation("flow:updateSettings", { token: TOKEN, eventDate: realEventDate });
   await browser.close();
   await convex.mutation("flow:resetEvent", { token: TOKEN, confirm: "RESET" });
 }

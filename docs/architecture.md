@@ -19,13 +19,13 @@ Static site on Netlify (SPA redirect in `netlify.toml`). No accounts, no auth pr
 | `shared/fairness.ts` | Team allocator: exhaustive search over splits, uniform choice among the most balanced, uniform captain draw. Seeded RNG for tests. |
 | `shared/salah.ts` | Prayer types, Birmingham Central Mosque defaults for 18 Oct 2026, validation, "next prayer / jama'ah" status. |
 | `shared/time.ts` | Time-zone-correct `HH:mm` ↔ epoch (Europe/London), countdown formatting. |
-| `shared/timer.ts` | Pure Pomodoro state transitions (start / pause / resume / next session). |
+| `shared/hacking.ts` | The hacking clock: the focus/break plan, hacking time done, pause/resume, prayer breaks, prayer windows and the projected finish. |
 | `shared/names.ts`, `levels.ts`, `teams.ts`, `rng.ts` | Name rules, levels, team names/colours, PRNG. |
 | `convex/schema.ts` | Tables: `event` (single row), `participants`, `teams`. |
 | `convex/model.ts` | Defaults, `loadEvent`, phase guards, admin-token check, `fail()` (throws `ConvexError {code, message}`). |
 | `convex/event.ts` | `publicState` (what every screen sees), `me` (a phone's own row by device id), `checkAdmin`, `serverNow`. |
 | `convex/participants.ts` | `register` (idempotent per device), `adminUpdate`, `adminRemove`, `addTestParticipants`. |
-| `convex/flow.ts` | All organiser actions: make/reshuffle teams, reveal countdown, start, pause/resume/skip/restart, voting open/close/reveal/restart, settings, reset. Scheduled internal mutations `autoStart` and `advanceTimer`. |
+| `convex/flow.ts` | All organiser actions: make/reshuffle teams, reveal countdown, start, pause/resume/skip/restart, prayer breaks, voting open/close/reveal/restart, settings, reset. Scheduled internal mutations `autoStart`, `finishHacking` and `endPrayerBreakAuto`. |
 | `convex/voting.ts` | `castVote`, `pendingVoters` (organiser only). |
 | `src/routes/` | `EventDisplay` (projector), `JoinPage`, `VotePage`, `AdminPage`, `HomePage` (redirects by phase). |
 | `src/components/display/` | One view per phase plus `OrganiserTray` (the hidden corner controls) and `Confetti`. |
@@ -49,7 +49,11 @@ Screens decide what to render from `phase` only. Animations that should play onl
 
 **Teams.** `makeTeams` requires 3–12 people and an explicit `acceptCount` if the number ≠ expected. `allocateTeams` enumerates every assignment into sizes like 3/3/3 or 4/3/3. It scores each by the spread of average experience (beginner = 1, intermediate = 2, advanced = 3), then by how many same-level members share a team. It collects every optimal assignment and picks one uniformly. Captains are a separate uniform draw per team.
 
-**Timer.** The server stores `timer.endsAt` (epoch ms) while running, or `remainingMs` while paused. Every time a running session is set, `ctx.scheduler.runAt(endsAt, advanceTimer, {expectedEndsAt})` is queued. The job no-ops if the timer changed since (paused, skipped), so stale jobs are harmless. Each next session is anchored to the previous `endsAt`, never to "now", so it can't drift. Clients count down to `endsAt` using a server-clock offset measured via the `serverNow` mutation. The reveal auto-start uses the same pattern (`autoStart`).
+**Hacking clock.** The session is a fixed amount of *hacking time* (default 4h 30m), not a wall-clock window. `event.clock` stores `doneMs` (hacking time completed) and `runningSince` (server time the current run started, null while paused). Every screen derives everything else from that with `shared/hacking.ts`: the plan (50/10 focus/break rounds, never ending on a break), the current block, what's left of it, and wall-clock times for what's next. Skip and restart just move `doneMs`. Clients count using a server-clock offset measured via the `serverNow` mutation, so a backgrounded Safari can't drift.
+
+**Prayer breaks.** `startPrayerBreak(prayer)` is allowed only during hacking, once per prayer, and only while that prayer is in time (from when it begins until the next prayer begins) on `eventDate`. It pauses the clock, sets `clock.prayer.endsAt`, and records where it happened (`prayersTaken`, for the dial's badges). `endPrayerBreakAuto` resumes hacking at exactly `endsAt`. `resume` ends it early. Because hacking time excludes prayer breaks, the finish moves back automatically: 12:30 + 4h 30m + 2 × 10 min = 17:20.
+
+**Scheduled jobs.** Whenever the clock is saved running, `finishHacking({runningSince})` is queued for the moment hacking time runs out. A prayer break queues `endPrayerBreakAuto({endsAt})`. Each job no-ops if the clock changed since (paused, skipped, ended early), so stale jobs are harmless. The reveal auto-start uses the same pattern (`autoStart`).
 
 **Votes.** `castVote` identifies the voter by device id, or by normalised name when the phone isn't theirs. It rejects unknown voters, voters without a team, repeat voters and own-team votes, then does `team.votes += 1` and `voter.hasVoted = true` in one transaction. Convex mutations are serialisable, so concurrent duplicates retry and fail on `hasVoted`. Nothing links voter to team. `publicState` returns `votes: null` for every team until `phase === "results"`.
 

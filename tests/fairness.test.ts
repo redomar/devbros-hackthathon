@@ -50,6 +50,39 @@ describe("allocateTeams", () => {
     expectPartition(ten, teams);
   });
 
+  const pairLevels = (input: Allocatable[], seed: number) => {
+    const pair = allocateTeams(input, 3, seededRng(seed)).find((t) => t.memberIds.length === 2)!;
+    return pair.memberIds.map((id) => input.find((p) => p.id === id)!.experience).sort();
+  };
+
+  it("never pairs a beginner in a team of two when advanced + intermediate is possible", () => {
+    // 8 people as 3/3/2. Balance alone would happily pick advanced + beginner for the pair.
+    const eight = people(["beginner", "beginner", "beginner", "intermediate", "intermediate", "intermediate", "advanced", "advanced"]);
+    for (let seed = 1; seed <= 50; seed++) {
+      const levels = pairLevels(eight, seed);
+      expect(levels).toContain("advanced");
+      expect(levels).not.toContain("beginner");
+    }
+  });
+
+  it("applies the pair rule to both teams of two at 7 people", () => {
+    const seven = people(["beginner", "beginner", "beginner", "intermediate", "intermediate", "advanced", "advanced"]);
+    for (let seed = 1; seed <= 20; seed++) {
+      const teams = allocateTeams(seven, 3, seededRng(seed));
+      expect(teams.map((t) => t.memberIds.length)).toEqual([3, 2, 2]);
+      for (const t of teams.filter((t) => t.memberIds.length === 2)) {
+        const levels = t.memberIds.map((id) => seven.find((p) => p.id === id)!.experience).sort();
+        expect(levels).toEqual(["advanced", "intermediate"]);
+      }
+    }
+  });
+
+  it("falls back to the strongest pair it can when the rule can't be met", () => {
+    // No advanced at all: the pair should still avoid beginners.
+    const noAdvanced = people(["beginner", "beginner", "beginner", "beginner", "intermediate", "intermediate", "intermediate", "intermediate"]);
+    for (let seed = 1; seed <= 20; seed++) expect(pairLevels(noAdvanced, seed)).toEqual(["intermediate", "intermediate"]);
+  });
+
   it("rejects too few or too many people", () => {
     expect(() => allocateTeams(people(["beginner", "advanced"]), 3, seededRng(1))).toThrow();
     expect(() => allocateTeams(people(Array(13).fill("beginner")), 3, seededRng(1))).toThrow();

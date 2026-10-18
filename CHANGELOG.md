@@ -4,6 +4,12 @@ All notable changes to Dev Bros: the Hackthathon. Versions follow [Semantic Vers
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-18
+
+### Fixed
+
+- **Teams of two get a strong pair.** With 7 or 8 people, a team of two is now always one advanced plus an intermediate or advanced, never a beginner paired with an advanced. If nobody advanced has checked in, the pair still avoids beginners where it can.
+
 ## [1.2.0] - 2026-10-18
 
 ### Added

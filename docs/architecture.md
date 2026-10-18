@@ -48,7 +48,7 @@ Screens decide what to render from `phase` only. Animations that should play onl
 
 ## Key mechanisms
 
-**Teams.** `makeTeams` requires 3–12 people and an explicit `acceptCount` if the number ≠ expected. `allocateTeams` enumerates every assignment into sizes like 3/3/3 or 4/3/3. It scores each by the spread of average experience (beginner = 1, intermediate = 2, advanced = 3), then by how many same-level members share a team. It collects every optimal assignment and picks one uniformly. Captains are a separate uniform draw per team.
+**Teams.** `makeTeams` requires 3–12 people and an explicit `acceptCount` if the number ≠ expected. `allocateTeams` enumerates every assignment into sizes like 3/3/3 or 4/3/3. A team of two must first be advanced + at least intermediate when the turnout allows it (decision 19). It then scores each by the spread of average experience (beginner = 1, intermediate = 2, advanced = 3), then by how many same-level members share a team. It collects every optimal assignment and picks one uniformly. Captains are a separate uniform draw per team.
 
 **Hacking clock.** The session is a fixed amount of *hacking time* (default 4h 30m), not a wall-clock window. `event.clock` stores `doneMs` (hacking time completed) and `runningSince` (server time the current run started, null while paused). Every screen derives everything else from that with `shared/hacking.ts`: the plan (50/10 focus/break rounds, never ending on a break), the current block, what's left of it, and wall-clock times for what's next. Skip and restart just move `doneMs`. Clients count using a server-clock offset measured via the `serverNow` mutation, so a backgrounded Safari can't drift.
 

@@ -5,6 +5,8 @@ import { formatClock, formatRelative } from "../../../shared/time";
 import { PRAYER_LABEL } from "../../../shared/salah";
 import { prayerStartAt } from "../../../shared/hacking";
 import { HackingDial, dialMode } from "../HackingDial";
+import { teamSymbol } from "../TeamCard";
+import { teamStyle } from "../teamStyle";
 
 export function HackathonView({ state, now, h }: { state: PublicState; now: number; h: Hacking }) {
   const mode = dialMode(state, h);
@@ -16,6 +18,7 @@ export function HackathonView({ state, now, h }: { state: PublicState; now: numb
         </div>
       </div>
       <aside className="flex min-w-0 flex-1 flex-col gap-[1.2em]">
+        <TeamBadges teams={state.teams} />
         {mode === "break" ? (
           <Card className="ring-2 ring-[#9cc3e3]">
             <div className="font-display text-[2.2em] font-extrabold leading-tight text-[#0f5c8c]">Step away from the screen.</div>
@@ -118,6 +121,25 @@ function UpNext({ state, h }: { state: PublicState; h: Hacking }) {
         <div className="mt-[0.7em] text-[0.9em] font-semibold text-ink-muted">Times move back {state.settings.prayerBreakMinutes} minutes after each prayer break.</div>
       ) : null}
     </Card>
+  );
+}
+
+/** One row of team badges (colour + symbol + current name, including captains' renames). */
+function TeamBadges({ teams }: { teams: PublicState["teams"] }) {
+  if (teams.length === 0) return null;
+  return (
+    <div className="flex gap-[0.45em]">
+      {teams.map((t) => (
+        <span
+          key={t.id}
+          className={`flex min-w-0 flex-1 items-center justify-center gap-[0.35em] rounded-full px-[0.7em] py-[0.5em] text-white shadow-[0_10px_24px_-16px_rgb(22_42_54/0.6)] ${teamStyle(t.key).bg}`}
+          title={t.name}
+        >
+          <span aria-hidden className="text-[0.95em]">{teamSymbol(t.key)}</span>
+          <span className="min-w-0 truncate font-display text-[1.1em] font-bold tracking-tight">{t.name}</span>
+        </span>
+      ))}
+    </div>
   );
 }
 

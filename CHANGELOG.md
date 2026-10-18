@@ -4,6 +4,12 @@ All notable changes to Dev Bros: the Hackthathon. Versions follow [Semantic Vers
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-18
+
+### Changed
+
+- **Team names on the big screen during hacking:** a row of three team badges (colour, symbol and current name, including captains' renames) sits above the side column. Long names are shortened with "…".
+
 ## [1.3.0] - 2026-10-18
 
 ### Added

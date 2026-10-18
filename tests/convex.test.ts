@@ -343,3 +343,34 @@ describe("team names", () => {
     expect(validateTeamName("<script>")).toMatch(/only/);
   });
 });
+
+describe("rejoin links", () => {
+  it("move a brother to a new phone once, organiser only, and expire", async () => {
+    const t = convexTest(schema, modules);
+    await registerNine(t);
+    await t.mutation(api.flow.makeTeams, { token });
+    const old = "device-0-xxxxxxxx";
+    const me = (await t.query(api.event.me, { deviceId: old }))!;
+
+    await expect(t.mutation(api.participants.issueRejoin, { token: "wrong", id: me.id })).rejects.toThrow();
+    const { code } = await t.mutation(api.participants.issueRejoin, { token, id: me.id });
+
+    const fresh = "rejoined-phone-xxxxxxxx";
+    expect(await t.mutation(api.participants.claimRejoin, { code, deviceId: fresh })).toEqual({ firstName: me.firstName });
+    expect((await t.query(api.event.me, { deviceId: fresh }))?.id).toBe(me.id);
+    expect(await t.query(api.event.me, { deviceId: old })).toBeNull();
+    // Works once.
+    await expect(t.mutation(api.participants.claimRejoin, { code, deviceId: "another-phone-xxxxxxxx" })).rejects.toThrow(/expired or was already used/);
+    // Codes never reach public state.
+    expect(JSON.stringify(await t.query(api.event.publicState, {}))).not.toContain(code);
+
+    vi.useFakeTimers();
+    try {
+      const second = await t.mutation(api.participants.issueRejoin, { token, id: me.id });
+      vi.advanceTimersByTime(16 * 60_000);
+      await expect(t.mutation(api.participants.claimRejoin, { code: second.code, deviceId: "late-phone-xxxxxxxx" })).rejects.toThrow(/expired/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

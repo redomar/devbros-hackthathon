@@ -4,6 +4,13 @@ All notable changes to Dev Bros: the Hackthathon. Versions follow [Semantic Vers
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-18
+
+### Added
+
+- **Rejoin QR for signed-out brothers.** If someone loses their check-in (a closed private/incognito tab, cleared Safari, a new phone), an organiser taps **Rejoin QR** next to their name on `/admin` and they scan it. Their phone is back in as them, on their team, and their old phone is signed out. Each code works once and expires after 15 minutes. It's a separate `/rejoin/…` link, never the organiser link.
+- **Players and teams on `/admin`:** a read-only list of every brother grouped by team, with their level and who's captain.
+
 ## [1.2.1] - 2026-10-18
 
 ### Fixed

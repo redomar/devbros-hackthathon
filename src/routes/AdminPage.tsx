@@ -7,7 +7,8 @@ import { useEventState, type PublicParticipant, type PublicState, type PublicTea
 import { useNow } from "../lib/clock";
 import { getAdminToken, setAdminToken } from "../lib/storage";
 import { errorMessage } from "../lib/errors";
-import { joinUrl, voteUrl } from "../lib/urls";
+import { joinUrl, rejoinUrl, voteUrl } from "../lib/urls";
+import { QRCodeSVG } from "qrcode.react";
 import { LEVELS, LEVEL_LABEL, type Level } from "../../shared/levels";
 import { TEAM_NAME_MAX_LENGTH, defaultTeamName } from "../../shared/teams";
 import { teamSymbol } from "../components/TeamCard";
@@ -123,6 +124,8 @@ function AdminDashboard({ state, token, onSignOut }: { state: PublicState; token
           <p className="text-sm text-ink-muted">{pending.length ? pending.join(", ") : "Everyone has voted."}</p>
         </Card>
       ) : null}
+
+      {state.participants.length ? <PlayersCard state={state} token={token} /> : null}
 
       {state.teams.length && state.phase !== "results" ? (
         <Card className="flex flex-col gap-2 p-4">
@@ -376,6 +379,91 @@ function TeamNameRow({ team, token }: { team: PublicTeam; token: string }) {
           )}
         </div>
       )}
+      {error ? <Notice tone="error">{error}</Notice> : null}
+    </li>
+  );
+}
+
+/** Read-only list of everyone by team, with a one-time rejoin QR for anyone who's lost their phone or tab. */
+function PlayersCard({ state, token }: { state: PublicState; token: string }) {
+  const byId = new Map(state.participants.map((p) => [p.id, p]));
+  const groups = state.teams.map((t) => ({
+    key: t.id as string,
+    title: `${teamSymbol(t.key)} ${t.name}`,
+    members: t.memberIds.map((id) => byId.get(id)).filter((p): p is PublicParticipant => !!p),
+    captainId: t.captainId as string | null,
+  }));
+  const assigned = new Set(state.teams.flatMap((t) => t.memberIds as string[]));
+  const unassigned = state.participants.filter((p) => !assigned.has(p.id));
+  if (unassigned.length) groups.push({ key: "none", title: state.teams.length ? "No team" : "Checked in", members: unassigned, captainId: null });
+
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <h2 className="font-display text-xl font-bold">Players and teams</h2>
+      <p className="text-sm text-ink-muted">
+        Lost their phone or a private tab? Tap <strong>Rejoin QR</strong> and let them scan it from this screen. It works
+        once, for 15 minutes. Never show it on the big screen.
+      </p>
+      {groups.map((g) => (
+        <div key={g.key} className="flex flex-col">
+          <h3 className="font-semibold">{g.title}</h3>
+          <ul className="flex flex-col divide-y divide-border">
+            {g.members.map((p) => (
+              <PlayerRow key={p.id} p={p} captain={p.id === g.captainId} token={token} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+function PlayerRow({ p, captain, token }: { p: PublicParticipant; captain: boolean; token: string }) {
+  const issue = useMutation(api.participants.issueRejoin);
+  const [link, setLink] = useState<{ url: string; expiresAt: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <li className="flex flex-col gap-2 py-2.5">
+      <div className="flex items-center gap-2">
+        <span className="flex-1 font-semibold">
+          {p.firstName}
+          {captain ? <span className="ml-1 text-xs font-normal text-ink-muted">captain</span> : null}
+        </span>
+        <span className="text-[13px]">
+          <LevelPill level={p.experience} />
+        </span>
+        {link ? (
+          <Button size="sm" variant="ghost" onClick={() => setLink(null)}>
+            Hide
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={async () => {
+              try {
+                const { code, expiresAt } = await issue({ token, id: p.id as Id<"participants"> });
+                setLink({ url: rejoinUrl(code), expiresAt });
+                setError(null);
+              } catch (e) {
+                setError(errorMessage(e));
+              }
+            }}
+          >
+            Rejoin QR
+          </Button>
+        )}
+      </div>
+      {link ? (
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-3 ring-1 ring-border">
+          <QRCodeSVG value={link.url} level="M" marginSize={2} className="block size-56" fgColor="#162A36" bgColor="#FFFFFF" />
+          <span className="text-center text-sm text-ink-muted">
+            {p.firstName} scans this with their camera. Works once, until{" "}
+            {new Date(link.expiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}.
+          </span>
+        </div>
+      ) : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
     </li>
   );

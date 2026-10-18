@@ -24,11 +24,11 @@ Static site on Netlify (SPA redirect in `netlify.toml`). No accounts, no auth pr
 | `convex/schema.ts` | Tables: `event` (single row), `participants`, `teams`. |
 | `convex/model.ts` | Defaults, `loadEvent`, phase guards, admin-token check, `fail()` (throws `ConvexError {code, message}`). |
 | `convex/event.ts` | `publicState` (what every screen sees), `me` (a phone's own row by device id), `checkAdmin`, `serverNow`. |
-| `convex/participants.ts` | `register` (idempotent per device), `adminUpdate`, `adminRemove`, `addTestParticipants`. |
+| `convex/participants.ts` | `register` (idempotent per device), `issueRejoin` / `claimRejoin` (one-time organiser QR that moves a check-in to a new phone), `adminUpdate`, `adminRemove`, `addTestParticipants`. |
 | `convex/flow.ts` | All organiser actions: make/reshuffle teams, reveal countdown, start, pause/resume/skip/restart, prayer breaks, voting open/close/reveal/restart, settings, reset. Scheduled internal mutations `autoStart`, `finishHacking` and `endPrayerBreakAuto`. |
 | `convex/teams.ts` | `rename` (captain only, by device, after the draw until voting opens), `adminRename` (organiser fix or reset to the default name). |
 | `convex/voting.ts` | `castVote`, `pendingVoters` (organiser only). |
-| `src/routes/` | `EventDisplay` (projector), `JoinPage`, `VotePage`, `AdminPage`, `HomePage` (redirects by phase). |
+| `src/routes/` | `EventDisplay` (projector), `JoinPage`, `VotePage`, `AdminPage`, `RejoinPage`, `HomePage` (redirects by phase). |
 | `src/components/display/` | One view per phase plus `OrganiserTray` (the hidden corner controls) and `Confetti`. |
 | `src/components/OrganiserControls.tsx` | Phase-aware buttons shared by the tray and the admin page; all confirmations live here. |
 | `src/lib/` | Convex client, server-clock offset (`clock.tsx`), connection state, localStorage helpers, sound, results ranking. |

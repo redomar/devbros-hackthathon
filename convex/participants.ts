@@ -58,6 +58,44 @@ export const register = mutation({
   },
 });
 
+const REJOIN_TTL_MS = 15 * 60_000;
+
+/** Organiser: a one-time link that lets a brother get back in on any phone. Valid for 15 minutes. */
+export const issueRejoin = mutation({
+  args: { token: v.string(), id: v.id("participants") },
+  handler: async (ctx, { token, id }) => {
+    requireAdmin(token);
+    const p = await ctx.db.get(id);
+    if (!p) fail("not_found", "Participant not found.");
+    const code = crypto.randomUUID().replace(/-/g, "");
+    const expiresAt = Date.now() + REJOIN_TTL_MS;
+    await ctx.db.patch(id, { rejoinCode: code, rejoinExpiresAt: expiresAt });
+    return { code, expiresAt };
+  },
+});
+
+/**
+ * A phone opens a rejoin link and becomes that brother. The phone sends a brand-new device id, so
+ * it never clashes with another check-in; the old device is signed out. The code works once.
+ */
+export const claimRejoin = mutation({
+  args: { code: v.string(), deviceId: v.string() },
+  handler: async (ctx, { code, deviceId }) => {
+    if (deviceId.length < 8 || deviceId.length > 64) fail("bad_device", "Please refresh the page and try again.");
+    const p = code ? (await ctx.db.query("participants").collect()).find((x) => x.rejoinCode === code) : undefined;
+    if (!p || (p.rejoinExpiresAt ?? 0) < Date.now()) {
+      fail("bad_code", "This link has expired or was already used. Ask an organiser for a new QR code.");
+    }
+    const clash = await ctx.db
+      .query("participants")
+      .withIndex("by_device", (q) => q.eq("deviceId", deviceId))
+      .first();
+    if (clash && clash._id !== p._id) fail("device_in_use", "Please refresh the page and try again.");
+    await ctx.db.patch(p._id, { deviceId, rejoinCode: undefined, rejoinExpiresAt: undefined });
+    return { firstName: p.firstName };
+  },
+});
+
 /** A phone removes its own check-in (before teams are drawn). */
 export const leave = mutation({
   args: { deviceId: v.string() },

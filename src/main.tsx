@@ -6,6 +6,7 @@ import { convex } from "./lib/convex";
 import { ServerClockProvider } from "./lib/clock";
 import { EventDisplay } from "./routes/EventDisplay";
 import { JoinPage } from "./routes/JoinPage";
+import { RejoinPage } from "./routes/RejoinPage";
 import { VotePage } from "./routes/VotePage";
 import { AdminPage } from "./routes/AdminPage";
 import { HomePage } from "./routes/HomePage";
@@ -21,6 +22,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/event" element={<EventDisplay />} />
             <Route path="/join" element={<JoinPage />} />
             <Route path="/vote" element={<VotePage />} />
+            <Route path="/rejoin/:code" element={<RejoinPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/:token" element={<AdminPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -40,5 +40,10 @@ export function resetDeviceId(): string {
   return id;
 }
 
+/** Adopt a device id the server has just bound to a check-in (organiser rejoin link). */
+export function setDeviceId(id: string) {
+  writeStore(DEVICE_KEY, id);
+}
+
 export const getAdminToken = () => readStore(ADMIN_KEY);
 export const setAdminToken = (token: string | null) => writeStore(ADMIN_KEY, token);

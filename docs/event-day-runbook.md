@@ -30,4 +30,5 @@
 - **Started voting by mistake:** **Back to hacking** (clears any votes cast).
 - **Someone can't vote "as themselves":** they use *Not you? Enter your name* and pick their name.
 - **Unsuitable or mistyped team name:** `/admin` → *Team names* → **Rename** or **Reset**.
+- **A brother is signed out** (private/incognito tab closed, cleared Safari, new phone): on `/admin` → *Players and teams* → **Rejoin QR** next to their name. They scan it from your phone and are back as themselves on their team. Works once, for 15 minutes; never show it on the big screen. Voting also still works by typing their name under *Not you?*.
 - **Lost the organiser code:** `npx convex env get ADMIN_TOKEN --prod`.

@@ -76,6 +76,9 @@ export default defineSchema({
     teamId: v.union(v.id("teams"), v.null()),
     hasVoted: v.boolean(),
     isTest: v.boolean(),
+    // One-time rejoin link issued by an organiser (lost phone, private tab). Never public.
+    rejoinCode: v.optional(v.string()),
+    rejoinExpiresAt: v.optional(v.number()),
   })
     .index("by_name", ["normalisedName"])
     .index("by_device", ["deviceId"]),

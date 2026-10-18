@@ -386,6 +386,7 @@ function TeamNameRow({ team, token }: { team: PublicTeam; token: string }) {
 
 /** Read-only list of everyone by team, with a one-time rejoin QR for anyone who's lost their phone or tab. */
 function PlayersCard({ state, token }: { state: PublicState; token: string }) {
+  const { confirm, dialog } = useConfirm();
   const byId = new Map(state.participants.map((p) => [p.id, p]));
   const groups = state.teams.map((t) => ({
     key: t.id as string,
@@ -404,12 +405,21 @@ function PlayersCard({ state, token }: { state: PublicState; token: string }) {
         Lost their phone or a private tab? Tap <strong>Rejoin QR</strong> and let them scan it from this screen. It works
         once, for 15 minutes. Never show it on the big screen.
       </p>
+      {dialog}
       {groups.map((g) => (
         <div key={g.key} className="flex flex-col">
           <h3 className="font-semibold">{g.title}</h3>
           <ul className="flex flex-col divide-y divide-border">
             {g.members.map((p) => (
-              <PlayerRow key={p.id} p={p} captain={p.id === g.captainId} token={token} />
+              <PlayerRow
+                key={p.id}
+                p={p}
+                captain={p.id === g.captainId}
+                token={token}
+                team={state.teams.find((t) => t.id === p.teamId)}
+                votingStarted={["voting", "results_pending", "results"].includes(state.phase)}
+                confirm={confirm}
+              />
             ))}
           </ul>
         </div>
@@ -418,21 +428,37 @@ function PlayersCard({ state, token }: { state: PublicState; token: string }) {
   );
 }
 
-function PlayerRow({ p, captain, token }: { p: PublicParticipant; captain: boolean; token: string }) {
+function PlayerRow({
+  p,
+  captain,
+  token,
+  team,
+  votingStarted,
+  confirm,
+}: {
+  p: PublicParticipant;
+  captain: boolean;
+  token: string;
+  team: PublicTeam | undefined;
+  votingStarted: boolean;
+  confirm: ReturnType<typeof useConfirm>["confirm"];
+}) {
   const issue = useMutation(api.participants.issueRejoin);
+  const kick = useMutation(api.participants.adminKick);
   const [link, setLink] = useState<{ url: string; expiresAt: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   return (
     <li className="flex flex-col gap-2 py-2.5">
-      <div className="flex items-center gap-2">
-        <span className="flex-1 font-semibold">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="min-w-0 flex-1 font-semibold">
           {p.firstName}
           {captain ? <span className="ml-1 text-xs font-normal text-ink-muted">captain</span> : null}
         </span>
         <span className="text-[13px]">
           <LevelPill level={p.experience} />
         </span>
+        <span className="ml-auto flex items-center gap-1">
         {link ? (
           <Button size="sm" variant="ghost" onClick={() => setLink(null)}>
             Hide
@@ -454,6 +480,39 @@ function PlayerRow({ p, captain, token }: { p: PublicParticipant; captain: boole
             Rejoin QR
           </Button>
         )}
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-label={`Kick ${p.firstName}`}
+          onClick={async () => {
+            const ok = await confirm({
+              title: `Kick ${p.firstName} out of the event?`,
+              body: (
+                <>
+                  {team ? (
+                    <>
+                      They'll be taken off <strong>{team.name}</strong>
+                      {captain ? " and a teammate will be drawn as the new captain" : ""}.{" "}
+                    </>
+                  ) : null}
+                  Their phone is signed out. {votingStarted ? "If they've already voted, that vote stays counted. " : ""}
+                  This can't be undone; they'd have to check in again.
+                </>
+              ),
+              confirmLabel: `Kick ${p.firstName}`,
+              tone: "danger",
+            });
+            if (!ok) return;
+            try {
+              await kick({ token, id: p.id as Id<"participants"> });
+            } catch (e) {
+              setError(errorMessage(e));
+            }
+          }}
+        >
+          Kick
+        </Button>
+        </span>
       </div>
       {link ? (
         <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-3 ring-1 ring-border">

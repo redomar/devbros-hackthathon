@@ -4,6 +4,7 @@ import { levelValidator } from "./schema";
 import { fail, loadEvent, requireAdmin, requirePhase } from "./model";
 import { normaliseName, tidyName, validateFirstName } from "../shared/names";
 import { MAX_PARTICIPANTS } from "../shared/fairness";
+import { pickIndex } from "../shared/rng";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
@@ -141,6 +142,28 @@ export const adminRemove = mutation({
   handler: async (ctx, { token, id }) => {
     requireAdmin(token);
     requirePhase(await loadEvent(ctx), "setup");
+    await ctx.db.delete(id);
+  },
+});
+
+/**
+ * Organiser removes someone at any point in the event (they left, or a duplicate check-in).
+ * They come off their team; if they were captain, a teammate is drawn uniformly as the new captain.
+ * A vote they already cast stays counted: there is no ballot record to undo.
+ */
+export const adminKick = mutation({
+  args: { token: v.string(), id: v.id("participants") },
+  handler: async (ctx, { token, id }) => {
+    requireAdmin(token);
+    const p = await ctx.db.get(id);
+    if (!p) fail("not_found", "Participant not found.");
+    const team = p.teamId ? await ctx.db.get(p.teamId) : null;
+    if (team) {
+      const memberIds = team.memberIds.filter((m) => m !== id);
+      if (memberIds.length === 0) fail("last_member", `${p.firstName} is the only one left on ${team.name}. Reshuffle the teams instead.`);
+      const captainId = team.captainId === id ? memberIds[pickIndex(Math.random, memberIds.length)] : team.captainId;
+      await ctx.db.patch(team._id, { memberIds, captainId });
+    }
     await ctx.db.delete(id);
   },
 });

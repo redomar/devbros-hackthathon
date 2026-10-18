@@ -374,3 +374,56 @@ describe("rejoin links", () => {
     }
   });
 });
+
+describe("kicking a player", () => {
+  it("works mid-event, organiser only, and takes them off their team", async () => {
+    const t = convexTest(schema, modules);
+    await registerNine(t);
+    await t.mutation(api.flow.makeTeams, { token });
+    await t.mutation(api.flow.startHackathon, { token });
+    const before = await t.query(api.event.publicState, {});
+    const team = before.teams[0];
+    const victim = team.memberIds.find((id) => id !== team.captainId)!;
+
+    await expect(t.mutation(api.participants.adminKick, { token: "wrong", id: victim })).rejects.toThrow();
+    await t.mutation(api.participants.adminKick, { token, id: victim });
+
+    const after = await t.query(api.event.publicState, {});
+    expect(after.participants.map((p) => p.id)).not.toContain(victim);
+    const t0 = after.teams.find((x) => x.id === team.id)!;
+    expect(t0.memberIds).toEqual(team.memberIds.filter((id) => id !== victim));
+    expect(t0.captainId).toBe(team.captainId);
+    expect(t0.name).toBe(team.name);
+  });
+
+  it("draws a new captain from the remaining teammates when the captain is kicked", async () => {
+    const t = convexTest(schema, modules);
+    await registerNine(t);
+    await t.mutation(api.flow.makeTeams, { token });
+    const team = (await t.query(api.event.publicState, {})).teams[1];
+    await t.mutation(api.participants.adminKick, { token, id: team.captainId });
+    const t1 = (await t.query(api.event.publicState, {})).teams.find((x) => x.id === team.id)!;
+    expect(t1.memberIds).not.toContain(team.captainId);
+    expect(t1.memberIds).toContain(t1.captainId);
+  });
+
+  it("refuses to empty a team, and keeps votes already cast", async () => {
+    const t = convexTest(schema, modules);
+    await toVoting(t);
+    const state = await t.query(api.event.publicState, {});
+    const voter = (await t.query(api.event.me, { deviceId: "device-0-xxxxxxxx" }))!;
+    const other = state.teams.find((x) => x.id !== voter.teamId)!;
+    await t.mutation(api.voting.castVote, { deviceId: "device-0-xxxxxxxx", teamId: other.id });
+    await t.mutation(api.participants.adminKick, { token, id: voter.id });
+
+    const team = state.teams.find((x) => x.id === voter.teamId)!;
+    const rest = team.memberIds.filter((id) => id !== voter.id);
+    await t.mutation(api.participants.adminKick, { token, id: rest[0] });
+    await expect(t.mutation(api.participants.adminKick, { token, id: rest[1] })).rejects.toThrow(/only one left/);
+
+    await t.mutation(api.flow.closeVoting, { token });
+    await t.mutation(api.flow.revealResults, { token });
+    const results = await t.query(api.event.publicState, {});
+    expect(results.teams.find((x) => x.id === other.id)!.votes).toBe(1);
+  });
+});

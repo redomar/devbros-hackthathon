@@ -4,6 +4,12 @@ All notable changes to Dev Bros: the Hackthathon. Versions follow [Semantic Vers
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-18
+
+### Added
+
+- **Kick a player.** Every brother in *Players and teams* on `/admin` has a **Kick** button, at any point in the event. A prompt checks first and says what happens: they come off their team, their phone is signed out, and if they were captain a teammate is drawn at random as the new captain. A vote they've already cast stays counted (there's no ballot to undo). The last person on a team can't be kicked; reshuffle instead.
+
 ## [1.3.1] - 2026-10-18
 
 ### Changed

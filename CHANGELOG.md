@@ -4,6 +4,8 @@ All notable changes to Dev Bros: the Hackthathon. Versions follow [Semantic Vers
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-18
+
 ### Added
 
 - **Captains can rename their team.** The captain sees **Rename your team** on *My team* (on `/join` or `/vote`), from the draw until voting opens. The colour and symbol stay the same, and the big screen shows "Team Emerald is now Byte Club" for a few seconds. Organisers can fix or reset any name in a new *Team names* section on `/admin`.
